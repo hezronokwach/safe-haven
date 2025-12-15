@@ -5,7 +5,7 @@
   /* Light mode colors */
   --background: #f9fafb;
   --foreground: #1f2937;
-  
+
   /* Teal theme colors (calming, supportive) */
   --teal-50: #f0fdfa;
   --teal-100: #ccfbf1;
@@ -17,12 +17,12 @@
   --teal-700: #0f766e;
   --teal-800: #115e59;
   --teal-900: #134e4a;
-  
+
   /* Red for panic/alert */
   --red-500: #ef4444;
   --red-600: #dc2626;
   --red-700: #b91c1c;
-  
+
   /* Orange for mute/warning */
   --orange-100: #ffedd5;
   --orange-600: #ea580c;
@@ -32,7 +32,7 @@
   /* Color palette */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  
+
   --color-teal-50: var(--teal-50);
   --color-teal-100: var(--teal-100);
   --color-teal-200: var(--teal-200);
@@ -43,18 +43,18 @@
   --color-teal-700: var(--teal-700);
   --color-teal-800: var(--teal-800);
   --color-teal-900: var(--teal-900);
-  
+
   --color-red-500: var(--red-500);
   --color-red-600: var(--red-600);
   --color-red-700: var(--red-700);
-  
+
   --color-orange-100: var(--orange-100);
   --color-orange-600: var(--orange-600);
-  
+
   /* Typography */
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
-  
+
   /* Spacing for accessibility (large touch targets) */
   --spacing-safe: 44px;
 }
@@ -78,4 +78,21 @@ body {
   transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
+}
+
+/* Custom animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out forwards;
 }
