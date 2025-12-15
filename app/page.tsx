@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Mic, MicOff, Volume2, VolumeX, ShieldAlert, LogOut } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Mic, MicOff, Volume2, VolumeX, ShieldAlert, LogOut, Sun, Moon } from "lucide-react";
 
 interface Message {
   role: "user" | "ai";
@@ -10,9 +10,30 @@ interface Message {
 
 export default function Home() {
   const [isListening, setIsListening] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [messages, _setMessages] = useState<Message[]>([]);
+  const [isLoading, _setIsLoading] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Initialize theme after mount to avoid hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+    const savedTheme = localStorage.getItem("theme");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const shouldBeDark = savedTheme === "dark" || (!savedTheme && prefersDark);
+
+    setIsDarkMode(shouldBeDark);
+    document.documentElement.classList.toggle("dark", shouldBeDark);
+  }, []);
+
+  // Toggle theme
+  const toggleTheme = () => {
+    const newTheme = !isDarkMode;
+    setIsDarkMode(newTheme);
+    document.documentElement.classList.toggle("dark", newTheme);
+    localStorage.setItem("theme", newTheme ? "dark" : "light");
+  };
 
   // Panic Button Logic - Immediate redirect for safety
   const handlePanic = () => {
@@ -30,27 +51,56 @@ export default function Home() {
   };
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center bg-gray-50 transition-colors duration-300 dark:bg-gray-900">
-      {/* Header with Panic Button */}
-      <header className="fixed top-0 z-50 w-full border-b border-gray-200 bg-white/80 backdrop-blur-sm transition-colors duration-300 dark:border-gray-700 dark:bg-gray-800/80">
+    <main className="relative flex min-h-screen flex-col items-center overflow-hidden bg-gradient-to-br from-gray-50 via-teal-50/30 to-blue-50/20 transition-colors duration-500 dark:from-gray-900 dark:via-teal-950/20 dark:to-blue-950/10">
+      {/* Animated Background Elements */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        {/* Floating gradient orbs */}
+        <div className="absolute -left-20 top-20 h-72 w-72 animate-pulse rounded-full bg-gradient-to-br from-teal-400/20 to-blue-400/20 blur-3xl"></div>
+        <div className="absolute -right-20 top-40 h-96 w-96 animate-pulse rounded-full bg-gradient-to-br from-purple-400/10 to-pink-400/10 blur-3xl [animation-delay:1s]"></div>
+        <div className="absolute bottom-20 left-1/3 h-80 w-80 animate-pulse rounded-full bg-gradient-to-br from-cyan-400/15 to-teal-400/15 blur-3xl [animation-delay:2s]"></div>
+
+        {/* Subtle grid pattern */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+      </div>
+
+      {/* Header with Panic Button and Theme Toggle */}
+      <header className="fixed top-0 z-50 w-full border-b border-gray-200/50 bg-white/80 backdrop-blur-md transition-colors duration-300 dark:border-gray-700/50 dark:bg-gray-800/80">
         <div className="mx-auto flex max-w-md items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-teal-600 shadow-lg shadow-teal-500/30">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-teal-600 shadow-lg shadow-teal-500/30 ring-2 ring-teal-400/20">
               <ShieldAlert className="h-5 w-5 text-white" />
             </div>
-            <h1 className="text-xl font-bold tracking-tight text-gray-900 transition-colors duration-300 dark:text-gray-50">
+            <h1 className="bg-gradient-to-r from-teal-600 to-teal-700 bg-clip-text text-xl font-bold tracking-tight text-transparent dark:from-teal-400 dark:to-teal-500">
               SafeHaven
             </h1>
           </div>
 
-          <button
-            onClick={handlePanic}
-            className="group flex items-center gap-2 rounded-full bg-red-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-red-600/30 transition-all duration-200 hover:scale-105 hover:bg-red-700 hover:shadow-xl hover:shadow-red-600/40 active:scale-95"
-            aria-label="Quick exit to safe website"
-          >
-            <LogOut className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-            <span className="hidden sm:inline">QUICK EXIT</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Theme Toggle */}
+            <button
+              onClick={toggleTheme}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-700 shadow-sm transition-all duration-200 hover:scale-110 hover:bg-gray-200 active:scale-95 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+              aria-label="Toggle theme"
+            >
+              {!mounted ? (
+                <Moon className="h-4 w-4" />
+              ) : isDarkMode ? (
+                <Sun className="h-4 w-4" />
+              ) : (
+                <Moon className="h-4 w-4" />
+              )}
+            </button>
+
+            {/* Panic Button */}
+            <button
+              onClick={handlePanic}
+              className="group flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-700 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-red-600/30 transition-all duration-200 hover:scale-105 hover:shadow-xl hover:shadow-red-600/40 active:scale-95"
+              aria-label="Quick exit to safe website"
+            >
+              <LogOut className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              <span className="hidden sm:inline">QUICK EXIT</span>
+            </button>
+          </div>
         </div>
       </header>
 
