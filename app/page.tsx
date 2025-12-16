@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Mic, MicOff, Volume2, VolumeX, ShieldAlert, LogOut, Sun, Moon } from "lucide-react";
+import useSpeechRecognition from "./hooks/use-speech-recognition";
 
 interface Message {
   role: "user" | "ai";
@@ -9,9 +10,9 @@ interface Message {
 }
 
 export default function Home() {
-  const [isListening, setIsListening] = useState(false);
-  const [messages, _setMessages] = useState<Message[]>([]);
-  const [isLoading, _setIsLoading] = useState(false);
+  const { isListening, transcript, startListening, stopListening, resetTranscript, hasRecognitionSupport } = useSpeechRecognition();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -27,6 +28,30 @@ export default function Home() {
     document.documentElement.classList.toggle("dark", shouldBeDark);
   }, []);
 
+  // Handle final transcript when listening stops
+  useEffect(() => {
+    if (!isListening && transcript.trim()) {
+      handleUserMessage(transcript);
+      resetTranscript();
+    }
+  }, [isListening, transcript, resetTranscript]);
+
+  const handleUserMessage = async (text: string) => {
+    // Add user message
+    setMessages((prev) => [...prev, { role: "user", text }]);
+    setIsLoading(true);
+
+    // TODO: Connect to backend API
+    // Simulate AI delay for now
+    setTimeout(() => {
+      setMessages((prev) => [
+        ...prev,
+        { role: "ai", text: "I'm here to listen. You are safe." },
+      ]);
+      setIsLoading(false);
+    }, 1500);
+  };
+
   // Toggle theme
   const toggleTheme = () => {
     const newTheme = !isDarkMode;
@@ -40,9 +65,13 @@ export default function Home() {
     window.location.href = "https://www.google.com";
   };
 
-  // Toggle microphone (placeholder for now, will add Speech API later)
+  // Toggle microphone
   const toggleListening = () => {
-    setIsListening(!isListening);
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
+    }
   };
 
   // Toggle mute mode
@@ -151,6 +180,18 @@ export default function Home() {
               </div>
             </div>
           ))}
+
+          {/* Live Transcript (Ghost Message) */}
+          {isListening && transcript && (
+            <div className="flex animate-fade-in justify-end">
+              <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-gradient-to-br from-teal-500/70 to-teal-600/70 px-4 py-3 text-white shadow-md shadow-teal-500/10 backdrop-blur-sm transition-all duration-300 sm:max-w-[75%]">
+                <p className="text-base leading-relaxed opacity-90">
+                  {transcript}
+                  <span className="animate-pulse">|</span>
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Thinking State */}
           {isLoading && (
