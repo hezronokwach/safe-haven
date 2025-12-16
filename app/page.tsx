@@ -17,6 +17,9 @@ export default function Home() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [mounted, setMounted] = useState(false);
 
+  // Audio playback ref
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
   // Initialize theme after mount to avoid hydration mismatch
   useEffect(() => {
     setMounted(true);
@@ -36,20 +39,85 @@ export default function Home() {
     }
   }, [isListening, transcript, resetTranscript]);
 
+  // Stop audio when component unmounts
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
+  const speakText = async (text: string) => {
+    if (isMuted) return;
+
+    try {
+      const response = await fetch("/api/speak", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!response.ok) throw new Error("Failed to generate speech");
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.play();
+    } catch (error) {
+      console.error("Speech playback error:", error);
+    }
+  };
+
   const handleUserMessage = async (text: string) => {
     // Add user message
-    setMessages((prev) => [...prev, { role: "user", text }]);
+    const userMessage: Message = { role: "user", text };
+    setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
 
-    // TODO: Connect to backend API
-    // Simulate AI delay for now
-    setTimeout(() => {
+    try {
+      // Format history for Gemini (excluding the latest message which is sent as 'message')
+      // Gemini expects role: 'user' | 'model'
+      const history = messages.map(msg => ({
+        role: msg.role === "user" ? "user" : "model",
+        parts: [{ text: msg.text }]
+      }));
+
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text, history }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to get response");
+      }
+
+      const data = await response.json();
+
       setMessages((prev) => [
         ...prev,
-        { role: "ai", text: "I'm here to listen. You are safe." },
+        { role: "ai", text: data.response },
       ]);
+
+      // Play audio response
+      speakText(data.response);
+    } catch (error) {
+      console.error("Chat error:", error);
+      setMessages((prev) => [
+        ...prev,
+        { role: "ai", text: "I'm having trouble connecting right now. Please try again." },
+      ]);
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   // Toggle theme
@@ -60,8 +128,13 @@ export default function Home() {
     localStorage.setItem("theme", newTheme ? "dark" : "light");
   };
 
-  // Panic Button Logic - Immediate redirect for safety
+  // Panic Button Logic - Immediate redirect + Stop Audio
   const handlePanic = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    stopListening();
     window.location.href = "https://www.google.com";
   };
 
