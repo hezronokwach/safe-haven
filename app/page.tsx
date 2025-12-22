@@ -10,7 +10,7 @@ interface Message {
 }
 
 export default function Home() {
-  const { isListening, transcript, startListening, stopListening, resetTranscript, hasRecognitionSupport } = useSpeechRecognition();
+  const { isListening, transcript, startListening, stopListening, resetTranscript, hasRecognitionSupport, error } = useSpeechRecognition();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -185,7 +185,19 @@ export default function Home() {
 
   // Toggle mute mode
   const toggleMute = () => {
-    setIsMuted(!isMuted);
+    const newMutedState = !isMuted;
+    setIsMuted(newMutedState);
+
+    // If muting, stop all audio immediately
+    if (newMutedState) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+    }
   };
 
   return (
@@ -245,7 +257,17 @@ export default function Home() {
       {/* Chat Display Area */}
       <div className="mt-20 mb-32 w-full max-w-md flex-1 overflow-y-auto px-4 py-6 sm:px-6">
         <div className="space-y-4">
-          {messages.length === 0 && (
+          {error && (
+            <div className="rounded-lg bg-red-50 p-4 text-sm text-red-800 dark:bg-red-900/30 dark:text-red-200 animate-fade-in">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="h-4 w-4" />
+                <span className="font-medium">Microphone Error:</span>
+              </div>
+              <p className="mt-1 ml-6">{error}</p>
+            </div>
+          )}
+
+          {messages.length === 0 && !error && (
             <div className="flex min-h-[50vh] flex-col items-center justify-center space-y-6 text-center">
               <div className="relative">
                 {/* Animated pulse rings */}
