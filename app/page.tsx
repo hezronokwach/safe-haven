@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { Mic, MicOff, Volume2, VolumeX, ShieldAlert, LogOut, Sun, Moon } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Mic, MicOff, Volume2, VolumeX, ShieldAlert, LogOut, Sun, Moon, Phone } from "lucide-react";
 import useSpeechRecognition from "./hooks/use-speech-recognition";
 
 interface Message {
@@ -16,6 +16,7 @@ export default function Home() {
   const [isMuted, setIsMuted] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [showHelpline, setShowHelpline] = useState(false);
 
   // Audio playback ref
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -49,13 +50,24 @@ export default function Home() {
     };
   }, []);
 
+  // Debounce helper
+  const debounce = (func: Function, wait: number) => {
+    let timeout: NodeJS.Timeout;
+    return (...args: any[]) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func(...args), wait);
+    };
+  };
+
+  /**
+   * Handles text-to-speech playback using ElevenLabs API with a browser fallback.
+   * @param text The text content to be spoken.
+   */
   const speakText = async (text: string) => {
     if (isMuted) {
       console.log("Audio is muted, skipping playback.");
       return;
     }
-
-    console.log("Generating speech for:", text);
 
     try {
       const response = await fetch("/api/speak", {
@@ -84,14 +96,11 @@ export default function Home() {
     } catch (error) {
       console.error("ElevenLabs failed, switching to browser TTS:", error);
 
-      // Fallback to browser Web Speech API
       if ("speechSynthesis" in window) {
-        // Cancel any current speech
         window.speechSynthesis.cancel();
-
         const utterance = new SpeechSynthesisUtterance(text);
 
-        // Try to select a female voice (prefer soothing/soft)
+        // Select a preferred soothing female voice
         const voices = window.speechSynthesis.getVoices();
         const preferredVoice = voices.find(v =>
           v.name.includes("Female") ||
@@ -100,8 +109,7 @@ export default function Home() {
         );
 
         if (preferredVoice) utterance.voice = preferredVoice;
-
-        utterance.rate = 0.9; // Slightly slower for calming effect
+        utterance.rate = 0.9;
         utterance.pitch = 1.0;
 
         window.speechSynthesis.speak(utterance);
@@ -109,15 +117,17 @@ export default function Home() {
     }
   };
 
+  /**
+   * Processes the user's message, sends it to the Gemini API, and handles the response.
+   * @param text The user's input text.
+   */
   const handleUserMessage = async (text: string) => {
-    // Add user message
     const userMessage: Message = { role: "user", text };
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
 
     try {
-      // Format history for Gemini (excluding the latest message which is sent as 'message')
-      // Gemini expects role: 'user' | 'model'
+      // Prepare history for context-aware response
       const history = messages.map(msg => ({
         role: msg.role === "user" ? "user" : "model",
         parts: [{ text: msg.text }]
@@ -129,19 +139,21 @@ export default function Home() {
         body: JSON.stringify({ message: text, history }),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to get response");
-      }
+      if (!response.ok) throw new Error("Failed to get response");
 
       const data = await response.json();
 
+      // Check for emergency flag from Gemini
+      if (data.is_emergency) {
+        setShowHelpline(true);
+      }
+
       setMessages((prev) => [
         ...prev,
-        { role: "ai", text: data.response },
+        { role: "ai", text: data.reply }, // Note: API now returns { reply, is_emergency }
       ]);
 
-      // Play audio response
-      speakText(data.response);
+      speakText(data.reply);
     } catch (error) {
       console.error("Chat error:", error);
       setMessages((prev) => [
@@ -153,7 +165,9 @@ export default function Home() {
     }
   };
 
-  // Toggle theme
+  /**
+   * Toggles the application theme between light and dark modes.
+   */
   const toggleTheme = () => {
     const newTheme = !isDarkMode;
     setIsDarkMode(newTheme);
@@ -161,8 +175,10 @@ export default function Home() {
     localStorage.setItem("theme", newTheme ? "dark" : "light");
   };
 
-  // Panic Button Logic - Immediate redirect + Stop Audio
-  const handlePanic = () => {
+  /**
+   * Panic Button Logic - Immediate redirect + Stop Audio
+   */
+  const handlePanic = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
@@ -172,9 +188,11 @@ export default function Home() {
     }
     stopListening();
     window.location.href = "https://www.google.com";
-  };
+  }, [stopListening]);
 
-  // Toggle microphone
+  /**
+   * Toggles microphone listening state.
+   */
   const toggleListening = () => {
     if (isListening) {
       stopListening();
@@ -183,12 +201,13 @@ export default function Home() {
     }
   };
 
-  // Toggle mute mode
+  /**
+   * Toggles audio mute state. Stops any currently playing audio immediately.
+   */
   const toggleMute = () => {
     const newMutedState = !isMuted;
     setIsMuted(newMutedState);
 
-    // If muting, stop all audio immediately
     if (newMutedState) {
       if (audioRef.current) {
         audioRef.current.pause();
@@ -344,6 +363,19 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Emergency Helpline Button (Floating) */}
+      {showHelpline && (
+        <div className="fixed bottom-24 right-6 z-[60] animate-bounce">
+          <a
+            href="tel:1195"
+            className="flex items-center gap-2 rounded-full bg-red-600 px-6 py-4 font-bold text-white shadow-xl shadow-red-600/40 transition-transform hover:scale-105 active:scale-95"
+          >
+            <Phone className="h-6 w-6 animate-pulse" />
+            <span>CALL 1195</span>
+          </a>
+        </div>
+      )}
+
       {/* Control Panel Footer */}
       <footer className="fixed bottom-0 z-50 w-full border-t border-gray-200 bg-white/95 backdrop-blur-sm transition-colors duration-300 dark:border-gray-700 dark:bg-gray-800/95">
         <div className="mx-auto flex max-w-md items-center justify-between px-6 py-4 sm:px-8">
@@ -382,10 +414,14 @@ export default function Home() {
             )}
           </button>
 
-          {/* Info/Safety Icon */}
+          {/* Info/Safety Icon - Toggles Helpline */}
           <button
-            className="group flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-600 shadow-md transition-all duration-200 hover:scale-110 hover:bg-gray-200 active:scale-95 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-            aria-label="Safety information"
+            onClick={() => setShowHelpline(!showHelpline)}
+            className={`group flex h-12 w-12 items-center justify-center rounded-full transition-all duration-200 hover:scale-110 active:scale-95 ${showHelpline
+              ? "bg-red-100 text-red-600 shadow-inner dark:bg-red-900/30 dark:text-red-400"
+              : "bg-gray-100 text-gray-600 shadow-md hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+              }`}
+            aria-label="Toggle emergency helpline"
           >
             <ShieldAlert className="h-6 w-6 transition-transform group-hover:scale-110" />
           </button>
