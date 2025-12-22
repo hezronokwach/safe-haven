@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Mic, MicOff, Volume2, VolumeX, ShieldAlert, LogOut, Sun, Moon } from "lucide-react";
+import { Mic, MicOff, Volume2, VolumeX, ShieldAlert, LogOut, Sun, Moon, Phone } from "lucide-react";
 import useSpeechRecognition from "./hooks/use-speech-recognition";
 
 interface Message {
@@ -16,6 +16,7 @@ export default function Home() {
   const [isMuted, setIsMuted] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [showHelpline, setShowHelpline] = useState(false);
 
   // Audio playback ref
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -142,12 +143,17 @@ export default function Home() {
 
       const data = await response.json();
 
+      // Check for emergency flag from Gemini
+      if (data.is_emergency) {
+        setShowHelpline(true);
+      }
+
       setMessages((prev) => [
         ...prev,
-        { role: "ai", text: data.response },
+        { role: "ai", text: data.reply }, // Note: API now returns { reply, is_emergency }
       ]);
 
-      speakText(data.response);
+      speakText(data.reply);
     } catch (error) {
       console.error("Chat error:", error);
       setMessages((prev) => [
@@ -357,6 +363,19 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Emergency Helpline Button (Floating) */}
+      {showHelpline && (
+        <div className="fixed bottom-24 right-6 z-[60] animate-bounce">
+          <a
+            href="tel:1195"
+            className="flex items-center gap-2 rounded-full bg-red-600 px-6 py-4 font-bold text-white shadow-xl shadow-red-600/40 transition-transform hover:scale-105 active:scale-95"
+          >
+            <Phone className="h-6 w-6 animate-pulse" />
+            <span>CALL 1195</span>
+          </a>
+        </div>
+      )}
+
       {/* Control Panel Footer */}
       <footer className="fixed bottom-0 z-50 w-full border-t border-gray-200 bg-white/95 backdrop-blur-sm transition-colors duration-300 dark:border-gray-700 dark:bg-gray-800/95">
         <div className="mx-auto flex max-w-md items-center justify-between px-6 py-4 sm:px-8">
@@ -395,10 +414,14 @@ export default function Home() {
             )}
           </button>
 
-          {/* Info/Safety Icon */}
+          {/* Info/Safety Icon - Toggles Helpline */}
           <button
-            className="group flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-600 shadow-md transition-all duration-200 hover:scale-110 hover:bg-gray-200 active:scale-95 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-            aria-label="Safety information"
+            onClick={() => setShowHelpline(!showHelpline)}
+            className={`group flex h-12 w-12 items-center justify-center rounded-full transition-all duration-200 hover:scale-110 active:scale-95 ${showHelpline
+              ? "bg-red-100 text-red-600 shadow-inner dark:bg-red-900/30 dark:text-red-400"
+              : "bg-gray-100 text-gray-600 shadow-md hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+              }`}
+            aria-label="Toggle emergency helpline"
           >
             <ShieldAlert className="h-6 w-6 transition-transform group-hover:scale-110" />
           </button>
