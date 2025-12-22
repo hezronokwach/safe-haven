@@ -50,7 +50,12 @@ export default function Home() {
   }, []);
 
   const speakText = async (text: string) => {
-    if (isMuted) return;
+    if (isMuted) {
+      console.log("Audio is muted, skipping playback.");
+      return;
+    }
+
+    console.log("Generating speech for:", text);
 
     try {
       const response = await fetch("/api/speak", {
@@ -59,7 +64,11 @@ export default function Home() {
         body: JSON.stringify({ text }),
       });
 
-      if (!response.ok) throw new Error("Failed to generate speech");
+      if (!response.ok) {
+        const err = await response.json();
+        console.error("TTS API Error:", err);
+        throw new Error("Failed to generate speech");
+      }
 
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
@@ -71,8 +80,32 @@ export default function Home() {
       const audio = new Audio(url);
       audioRef.current = audio;
       audio.play();
+
     } catch (error) {
-      console.error("Speech playback error:", error);
+      console.error("ElevenLabs failed, switching to browser TTS:", error);
+
+      // Fallback to browser Web Speech API
+      if ("speechSynthesis" in window) {
+        // Cancel any current speech
+        window.speechSynthesis.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(text);
+
+        // Try to select a female voice (prefer soothing/soft)
+        const voices = window.speechSynthesis.getVoices();
+        const preferredVoice = voices.find(v =>
+          v.name.includes("Female") ||
+          v.name.includes("Samantha") ||
+          v.name.includes("Google US English")
+        );
+
+        if (preferredVoice) utterance.voice = preferredVoice;
+
+        utterance.rate = 0.9; // Slightly slower for calming effect
+        utterance.pitch = 1.0;
+
+        window.speechSynthesis.speak(utterance);
+      }
     }
   };
 
@@ -133,6 +166,9 @@ export default function Home() {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
+    }
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
     }
     stopListening();
     window.location.href = "https://www.google.com";
