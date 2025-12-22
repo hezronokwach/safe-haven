@@ -84,21 +84,32 @@ export default function useSpeechRecognition(): UseSpeechRecognitionReturn {
 
     const startListening = useCallback(() => {
         setError(null);
-        if (recognitionRef.current && !isListening) {
+        if (recognitionRef.current) {
             try {
                 recognitionRef.current.start();
-            } catch (error) {
-                console.error("Error starting recognition", error);
-                setError("Failed to start microphone.");
+            } catch (error: any) {
+                if (error.name === 'InvalidStateError' || error.message?.includes('already started')) {
+                    // Ignore "already started" errors, just update state if needed
+                    console.log("Speech recognition already active.");
+                    setIsListening(true);
+                } else {
+                    console.error("Error starting recognition", error);
+                    setError("Failed to start microphone.");
+                }
             }
         }
-    }, [isListening]);
+    }, []);
 
     const stopListening = useCallback(() => {
-        if (recognitionRef.current && isListening) {
-            recognitionRef.current.stop();
+        if (recognitionRef.current) {
+            try {
+                recognitionRef.current.stop();
+                console.log("Stopped recognition manually.");
+            } catch (error) {
+                console.error("Error stopping recognition:", error);
+            }
         }
-    }, [isListening]);
+    }, []);
 
     const resetTranscript = useCallback(() => {
         setTranscript("");
