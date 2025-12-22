@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Mic, MicOff, Volume2, VolumeX, ShieldAlert, LogOut, Sun, Moon } from "lucide-react";
 import useSpeechRecognition from "./hooks/use-speech-recognition";
 
@@ -49,13 +49,24 @@ export default function Home() {
     };
   }, []);
 
+  // Debounce helper
+  const debounce = (func: Function, wait: number) => {
+    let timeout: NodeJS.Timeout;
+    return (...args: any[]) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func(...args), wait);
+    };
+  };
+
+  /**
+   * Handles text-to-speech playback using ElevenLabs API with a browser fallback.
+   * @param text The text content to be spoken.
+   */
   const speakText = async (text: string) => {
     if (isMuted) {
       console.log("Audio is muted, skipping playback.");
       return;
     }
-
-    console.log("Generating speech for:", text);
 
     try {
       const response = await fetch("/api/speak", {
@@ -84,14 +95,11 @@ export default function Home() {
     } catch (error) {
       console.error("ElevenLabs failed, switching to browser TTS:", error);
 
-      // Fallback to browser Web Speech API
       if ("speechSynthesis" in window) {
-        // Cancel any current speech
         window.speechSynthesis.cancel();
-
         const utterance = new SpeechSynthesisUtterance(text);
 
-        // Try to select a female voice (prefer soothing/soft)
+        // Select a preferred soothing female voice
         const voices = window.speechSynthesis.getVoices();
         const preferredVoice = voices.find(v =>
           v.name.includes("Female") ||
@@ -100,8 +108,7 @@ export default function Home() {
         );
 
         if (preferredVoice) utterance.voice = preferredVoice;
-
-        utterance.rate = 0.9; // Slightly slower for calming effect
+        utterance.rate = 0.9;
         utterance.pitch = 1.0;
 
         window.speechSynthesis.speak(utterance);
@@ -109,15 +116,17 @@ export default function Home() {
     }
   };
 
+  /**
+   * Processes the user's message, sends it to the Gemini API, and handles the response.
+   * @param text The user's input text.
+   */
   const handleUserMessage = async (text: string) => {
-    // Add user message
     const userMessage: Message = { role: "user", text };
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
 
     try {
-      // Format history for Gemini (excluding the latest message which is sent as 'message')
-      // Gemini expects role: 'user' | 'model'
+      // Prepare history for context-aware response
       const history = messages.map(msg => ({
         role: msg.role === "user" ? "user" : "model",
         parts: [{ text: msg.text }]
@@ -129,9 +138,7 @@ export default function Home() {
         body: JSON.stringify({ message: text, history }),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to get response");
-      }
+      if (!response.ok) throw new Error("Failed to get response");
 
       const data = await response.json();
 
@@ -140,7 +147,6 @@ export default function Home() {
         { role: "ai", text: data.response },
       ]);
 
-      // Play audio response
       speakText(data.response);
     } catch (error) {
       console.error("Chat error:", error);
@@ -153,7 +159,9 @@ export default function Home() {
     }
   };
 
-  // Toggle theme
+  /**
+   * Toggles the application theme between light and dark modes.
+   */
   const toggleTheme = () => {
     const newTheme = !isDarkMode;
     setIsDarkMode(newTheme);
@@ -161,8 +169,10 @@ export default function Home() {
     localStorage.setItem("theme", newTheme ? "dark" : "light");
   };
 
-  // Panic Button Logic - Immediate redirect + Stop Audio
-  const handlePanic = () => {
+  /**
+   * Panic Button Logic - Immediate redirect + Stop Audio
+   */
+  const handlePanic = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
@@ -172,9 +182,11 @@ export default function Home() {
     }
     stopListening();
     window.location.href = "https://www.google.com";
-  };
+  }, [stopListening]);
 
-  // Toggle microphone
+  /**
+   * Toggles microphone listening state.
+   */
   const toggleListening = () => {
     if (isListening) {
       stopListening();
@@ -183,12 +195,13 @@ export default function Home() {
     }
   };
 
-  // Toggle mute mode
+  /**
+   * Toggles audio mute state. Stops any currently playing audio immediately.
+   */
   const toggleMute = () => {
     const newMutedState = !isMuted;
     setIsMuted(newMutedState);
 
-    // If muting, stop all audio immediately
     if (newMutedState) {
       if (audioRef.current) {
         audioRef.current.pause();
