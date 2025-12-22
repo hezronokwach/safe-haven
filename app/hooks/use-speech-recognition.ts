@@ -9,12 +9,14 @@ export interface UseSpeechRecognitionReturn {
     stopListening: () => void;
     resetTranscript: () => void;
     hasRecognitionSupport: boolean;
+    error: string | null;
 }
 
 export default function useSpeechRecognition(): UseSpeechRecognitionReturn {
     const [isListening, setIsListening] = useState(false);
     const [transcript, setTranscript] = useState("");
     const [hasRecognitionSupport, setHasRecognitionSupport] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     // Use a ref to store the recognition instance to persist it across renders
     const recognitionRef = useRef<any>(null);
@@ -35,6 +37,7 @@ export default function useSpeechRecognition(): UseSpeechRecognitionReturn {
 
             recognition.onstart = () => {
                 setIsListening(true);
+                setError(null);
             };
 
             recognition.onend = () => {
@@ -56,6 +59,13 @@ export default function useSpeechRecognition(): UseSpeechRecognitionReturn {
 
             recognition.onerror = (event: any) => {
                 console.error("Speech recognition error", event.error);
+                if (event.error === 'not-allowed' || event.error === 'permission-denied') {
+                    setError("Microphone access blocked. Please enable permissions.");
+                } else if (event.error === 'no-speech') {
+                    // Ignore no-speech errors (common in silence)
+                } else {
+                    setError(`Speech recognition error: ${event.error}`);
+                }
                 setIsListening(false);
             };
 
@@ -73,11 +83,13 @@ export default function useSpeechRecognition(): UseSpeechRecognitionReturn {
     }, []);
 
     const startListening = useCallback(() => {
+        setError(null);
         if (recognitionRef.current && !isListening) {
             try {
                 recognitionRef.current.start();
             } catch (error) {
                 console.error("Error starting recognition", error);
+                setError("Failed to start microphone.");
             }
         }
     }, [isListening]);
@@ -99,5 +111,6 @@ export default function useSpeechRecognition(): UseSpeechRecognitionReturn {
         stopListening,
         resetTranscript,
         hasRecognitionSupport,
+        error,
     };
 }
