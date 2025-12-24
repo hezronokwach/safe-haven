@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Mic, MicOff, Volume2, VolumeX, ShieldAlert, LogOut, Sun, Moon, Phone } from "lucide-react";
+import { Mic, MicOff, Volume2, VolumeX, ShieldAlert, LogOut, Sun, Moon, Phone, User } from "lucide-react";
 import useSpeechRecognition from "./hooks/use-speech-recognition";
 
 interface Message {
@@ -17,6 +17,7 @@ export default function Home() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [showHelpline, setShowHelpline] = useState(false);
+  const [voiceGender, setVoiceGender] = useState<'female' | 'male'>('female');
 
   // Audio playback ref
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -30,6 +31,22 @@ export default function Home() {
 
     setIsDarkMode(shouldBeDark);
     document.documentElement.classList.toggle("dark", shouldBeDark);
+
+    // Warm up speech synthesis voices (fixes issue where voices return empty initially)
+    const loadVoices = () => {
+      window.speechSynthesis.getVoices();
+    };
+
+    if ("speechSynthesis" in window) {
+      loadVoices();
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+
+    return () => {
+      if ("speechSynthesis" in window) {
+        window.speechSynthesis.onvoiceschanged = null;
+      }
+    }
   }, []);
 
   // Handle final transcript when listening stops
@@ -63,51 +80,83 @@ export default function Home() {
       return;
     }
 
-    try {
-      const response = await fetch("/api/speak", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
-      });
+    // FORCE BROWSER TTS (Temporary override for Voice Selection feature)
+    const useBrowserTTS = true;
 
-      if (!response.ok) {
-        const err = await response.json();
-        console.error("TTS API Error:", err);
-        throw new Error("Failed to generate speech");
+    if (!useBrowserTTS) {
+      try {
+        const response = await fetch("/api/speak", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+        });
+
+        if (!response.ok) {
+          const err = await response.json();
+          console.error("TTS API Error:", err);
+          throw new Error("Failed to generate speech");
+        }
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+
+        if (audioRef.current) {
+          audioRef.current.pause();
+        }
+
+        const audio = new Audio(url);
+        audioRef.current = audio;
+        audio.play();
+        return; // Exit if ElevenLabs succeeded
+
+      } catch (error) {
+        console.error("ElevenLabs failed, switching to browser TTS:", error);
+      }
+    }
+
+    // Browser TTS Fallback (or Primary if useBrowserTTS is true)
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+
+      // Select voice based on preferred gender
+      let voices = window.speechSynthesis.getVoices();
+
+      // Retry getting voices if empty (common browser quirk)
+      if (voices.length === 0) {
+        window.speechSynthesis.getVoices();
+        voices = window.speechSynthesis.getVoices();
       }
 
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
+      console.log("Available voices:", voices.map(v => v.name)); // Debugging
 
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
+      let preferredVoice: SpeechSynthesisVoice | undefined;
 
-      const audio = new Audio(url);
-      audioRef.current = audio;
-      audio.play();
-
-    } catch (error) {
-      console.error("ElevenLabs failed, switching to browser TTS:", error);
-
-      if ("speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-
-        // Select a preferred soothing female voice
-        const voices = window.speechSynthesis.getVoices();
-        const preferredVoice = voices.find(v =>
+      if (voiceGender === 'male') {
+        preferredVoice = voices.find(v =>
+          v.name.includes("Male") ||
+          v.name.includes("David") ||
+          v.name.includes("Microsoft David") ||
+          v.name.includes("Google UK English Male")
+        );
+      } else {
+        preferredVoice = voices.find(v =>
           v.name.includes("Female") ||
           v.name.includes("Samantha") ||
+          v.name.includes("Zira") ||
+          v.name.includes("Microsoft Zira") ||
+          v.name.includes("Hazel") ||
           v.name.includes("Google US English")
         );
-
-        if (preferredVoice) utterance.voice = preferredVoice;
-        utterance.rate = 0.9;
-        utterance.pitch = 1.0;
-
-        window.speechSynthesis.speak(utterance);
       }
+
+      if (preferredVoice) utterance.voice = preferredVoice;
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+
+
+
+      window.speechSynthesis.speak(utterance);
     }
   };
 
@@ -170,6 +219,13 @@ export default function Home() {
   };
 
   /**
+   * Toggles between Male and Female voices.
+   */
+  const toggleVoice = () => {
+    setVoiceGender(prev => prev === 'female' ? 'male' : 'female');
+  };
+
+  /**
    * Panic Button Logic - Immediate redirect + Stop Audio
    */
   const handlePanic = useCallback(() => {
@@ -216,19 +272,16 @@ export default function Home() {
   return (
     <main className="relative flex min-h-screen flex-col items-center overflow-hidden" style={{ backgroundColor: 'var(--bg-light)' }}>
       {/* Animated Background Elements */}
+      {/* Organic Aurora Background */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        {/* Floating gradient orbs - subtle and calming */}
-        <div className="absolute -left-32 top-10 h-96 w-96 rounded-full blur-3xl opacity-20" style={{ background: 'radial-gradient(circle, rgb(79, 158, 143) 0%, transparent 70%)' }}></div>
-        <div className="absolute -right-40 top-1/2 h-[500px] w-[500px] rounded-full blur-3xl opacity-15" style={{ background: 'radial-gradient(circle, rgb(107, 127, 168) 0%, transparent 70%)', animationDelay: '1s' }}></div>
-        <div className="absolute bottom-0 left-1/4 h-80 w-80 rounded-full blur-3xl opacity-10" style={{ background: 'radial-gradient(circle, rgb(79, 158, 143) 0%, transparent 70%)' }}></div>
-
-        {/* Subtle animated grid */}
-        <div className="absolute inset-0 opacity-40 dark:opacity-20" style={{ backgroundImage: 'linear-gradient(to right, var(--bg-light-secondary) 1px, transparent 1px), linear-gradient(to bottom, var(--bg-light-secondary) 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
+        <div className="absolute -left-4 top-0 h-96 w-96 animate-blob rounded-full bg-teal-300 opacity-30 blur-3xl filter transition-opacity duration-500 dark:bg-teal-600 dark:opacity-20 mix-blend-multiply dark:mix-blend-normal"></div>
+        <div className="absolute right-0 top-0 h-96 w-96 animate-blob rounded-full bg-purple-300 opacity-30 blur-3xl filter transition-opacity duration-500 [animation-delay:2s] dark:bg-purple-600 dark:opacity-20 mix-blend-multiply dark:mix-blend-normal"></div>
+        <div className="absolute -bottom-32 left-20 h-96 w-96 animate-blob rounded-full bg-pink-300 opacity-30 blur-3xl filter transition-opacity duration-500 [animation-delay:4s] dark:bg-pink-600 dark:opacity-20 mix-blend-multiply dark:mix-blend-normal"></div>
       </div>
 
       {/* Header with Panic Button and Theme Toggle */}
-      <header className="fixed top-0 z-50 w-full animate-slide-in-down" style={{ borderBottom: '1px solid var(--bg-light-tertiary)', backgroundColor: 'rgba(var(--bg-light-rgb, 250, 251, 252), 0.85)', backdropFilter: 'blur(12px)' }}>
-        <div className="mx-auto flex max-w-md items-center justify-between px-4 py-4 sm:px-6">
+      <header className="fixed top-0 z-50 w-full border-b border-white/20 bg-white/60 backdrop-blur-2xl transition-all duration-500 dark:border-white/10 dark:bg-gray-900/60 shadow-sm hover:bg-white/70 dark:hover:bg-gray-900/70">
+        <div className="mx-auto flex max-w-md items-center justify-between px-4 py-3 sm:px-6 lg:max-w-5xl">
           <div className="flex items-center gap-3">
             <div className="relative flex h-11 w-11 items-center justify-center rounded-xl shadow-sm" style={{ background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%)', boxShadow: '0 8px 16px rgba(79, 158, 143, 0.2)' }}>
               <ShieldAlert className="h-5 w-5 text-white animate-sway" style={{ filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))' }} />
@@ -241,7 +294,20 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            {/* Voice Toggle */}
+            <button
+              onClick={toggleVoice}
+              className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold shadow-sm transition-all duration-200 hover:scale-105 active:scale-95 ${voiceGender === 'male'
+                ? "bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/40 dark:text-blue-300"
+                : "bg-pink-100 text-pink-700 hover:bg-pink-200 dark:bg-pink-900/40 dark:text-pink-300"
+                }`}
+              aria-label={`Current voice: ${voiceGender}. Click to switch.`}
+            >
+              <User className="h-3.5 w-3.5" />
+              <span>{voiceGender === 'male' ? 'MALE' : 'FEMALE'}</span>
+            </button>
+
             {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
@@ -276,8 +342,8 @@ export default function Home() {
       </header>
 
       {/* Chat Display Area */}
-      <div className="mt-24 mb-36 w-full max-w-2xl flex-1 overflow-y-auto px-4 py-8 sm:px-6">
-        <div className="space-y-5">
+      <div className="mt-20 mb-32 w-full max-w-md flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:max-w-4xl lg:px-8">
+        <div className="space-y-4 lg:space-y-8">
           {error && (
             <div className="rounded-xl p-4 text-sm animate-fade-in" style={{ backgroundColor: 'rgba(215, 58, 58, 0.08)', borderLeft: '4px solid var(--error)', color: 'var(--error)' }}>
               <div className="flex items-center gap-2">
@@ -321,9 +387,9 @@ export default function Home() {
               style={{ animationDelay: `${index * 50}ms` }}
             >
               <div
-                className={`max-w-[80%] rounded-2xl px-5 py-4 shadow-sm transition-all duration-300 sm:max-w-[70%] ${msg.role === "user"
-                  ? "rounded-tr-none"
-                  : "rounded-tl-none"
+                className={`max-w-[85%] rounded-2xl px-5 py-3.5 shadow-md transition-all duration-300 sm:max-w-[75%] ${msg.role === "user"
+                  ? "rounded-br-sm bg-gradient-to-br from-teal-500 to-teal-600 text-white shadow-lg shadow-teal-500/20 border border-teal-400/20"
+                  : "rounded-bl-sm glass-panel text-gray-800 dark:text-gray-100 shadow-sm"
                   }`}
                 style={{
                   background: msg.role === "user"
@@ -355,12 +421,12 @@ export default function Home() {
           {/* Thinking State */}
           {isLoading && (
             <div className="flex animate-fade-in justify-start">
-              <div className="max-w-[80%] rounded-2xl rounded-tl-none px-5 py-4 sm:max-w-[70%]" style={{ backgroundColor: 'var(--bg-light-secondary)' }}>
-                <div className="flex items-center gap-3">
-                  <div className="flex gap-1.5">
-                    <div className="h-2.5 w-2.5 rounded-full animate-bot-thinking" style={{ backgroundColor: 'var(--primary)', animationDelay: '0s' }}></div>
-                    <div className="h-2.5 w-2.5 rounded-full animate-bot-thinking" style={{ backgroundColor: 'var(--primary)', animationDelay: '0.2s' }}></div>
-                    <div className="h-2.5 w-2.5 rounded-full animate-bot-thinking" style={{ backgroundColor: 'var(--primary)', animationDelay: '0.4s' }}></div>
+              <div className="max-w-[85%] rounded-2xl rounded-bl-sm glass-panel px-5 py-4 shadow-sm transition-colors duration-300 sm:max-w-[75%]">
+                <div className="flex items-center gap-2">
+                  <div className="flex gap-1">
+                    <div className="h-2 w-2 animate-bounce rounded-full bg-teal-600 [animation-delay:-0.3s]"></div>
+                    <div className="h-2 w-2 animate-bounce rounded-full bg-teal-600 [animation-delay:-0.15s]"></div>
+                    <div className="h-2 w-2 animate-bounce rounded-full bg-teal-600"></div>
                   </div>
                   <span className="text-sm" style={{ color: 'var(--text-light-secondary)' }}>
                     SafeHaven is listening...
@@ -374,19 +440,22 @@ export default function Home() {
 
       {/* Emergency Helpline Button (Floating) */}
       {showHelpline && (
-        <a
-          href="tel:1195"
-          className="fixed bottom-32 right-6 z-[60] flex animate-gentle-float items-center gap-3 rounded-full px-6 py-4 font-semibold text-white shadow-xl transition-transform hover:scale-105 active:scale-95"
-          style={{ background: 'linear-gradient(135deg, var(--error) 0%, #b91c1c 100%)', boxShadow: '0 12px 32px rgba(215, 58, 58, 0.3)' }}
-        >
-          <Phone className="h-5 w-5 animate-pulse" />
-          <span>Call 1195</span>
-        </a>
+        <div className="fixed bottom-24 right-6 z-[60] animate-float">
+          <a
+            href="tel:1195"
+            className="flex items-center gap-2 rounded-full bg-red-600 px-6 py-4 font-bold text-white shadow-xl shadow-red-600/40 transition-transform hover:scale-105 active:scale-95"
+          >
+            <Phone className="h-6 w-6 animate-pulse" />
+            <span>CALL 1195</span>
+          </a>
+        </div>
       )}
 
+
+
       {/* Control Panel Footer */}
-      <footer className="fixed bottom-0 z-50 w-full animate-slide-in-up" style={{ borderTop: '1px solid var(--bg-light-tertiary)', backgroundColor: 'rgba(var(--bg-light-rgb, 250, 251, 252), 0.9)', backdropFilter: 'blur(12px)' }}>
-        <div className="mx-auto flex max-w-2xl items-center justify-between gap-4 px-4 py-5 sm:px-6">
+      <footer className="fixed bottom-0 z-50 w-full border-t border-white/20 bg-white/60 backdrop-blur-2xl transition-all duration-500 dark:border-white/10 dark:bg-gray-900/60 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.02)]">
+        <div className="mx-auto flex max-w-md items-center justify-between px-6 py-4 sm:px-8 lg:max-w-5xl">
           {/* Mute Toggle */}
           <button
             onClick={toggleMute}
