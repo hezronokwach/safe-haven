@@ -10,7 +10,7 @@ interface Message {
 }
 
 export default function Home() {
-  const { isListening, transcript, startListening, stopListening, resetTranscript, hasRecognitionSupport, error } = useSpeechRecognition();
+  const { isListening, transcript, startListening, stopListening, resetTranscript, error } = useSpeechRecognition();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -38,6 +38,7 @@ export default function Home() {
       handleUserMessage(transcript);
       resetTranscript();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isListening, transcript, resetTranscript]);
 
   // Stop audio when component unmounts
@@ -50,14 +51,7 @@ export default function Home() {
     };
   }, []);
 
-  // Debounce helper
-  const debounce = (func: Function, wait: number) => {
-    let timeout: NodeJS.Timeout;
-    return (...args: any[]) => {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => func(...args), wait);
-    };
-  };
+
 
   /**
    * Handles text-to-speech playback using ElevenLabs API with a browser fallback.
