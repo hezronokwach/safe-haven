@@ -272,19 +272,16 @@ export default function Home() {
   return (
     <main className="relative flex min-h-screen flex-col items-center overflow-hidden bg-gradient-to-br from-gray-50 via-teal-50/30 to-blue-50/20 transition-colors duration-500 dark:from-gray-900 dark:via-teal-950/20 dark:to-blue-950/10">
       {/* Animated Background Elements */}
+      {/* Organic Aurora Background */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        {/* Floating gradient orbs */}
-        <div className="absolute -left-20 top-20 h-72 w-72 animate-pulse rounded-full bg-gradient-to-br from-teal-400/20 to-blue-400/20 blur-3xl"></div>
-        <div className="absolute -right-20 top-40 h-96 w-96 animate-pulse rounded-full bg-gradient-to-br from-purple-400/10 to-pink-400/10 blur-3xl [animation-delay:1s]"></div>
-        <div className="absolute bottom-20 left-1/3 h-80 w-80 animate-pulse rounded-full bg-gradient-to-br from-cyan-400/15 to-teal-400/15 blur-3xl [animation-delay:2s]"></div>
-
-        {/* Subtle grid pattern */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+        <div className="absolute -left-4 top-0 h-96 w-96 animate-blob rounded-full bg-teal-300 opacity-30 blur-3xl filter transition-opacity duration-500 dark:bg-teal-600 dark:opacity-20 mix-blend-multiply dark:mix-blend-normal"></div>
+        <div className="absolute right-0 top-0 h-96 w-96 animate-blob rounded-full bg-purple-300 opacity-30 blur-3xl filter transition-opacity duration-500 [animation-delay:2s] dark:bg-purple-600 dark:opacity-20 mix-blend-multiply dark:mix-blend-normal"></div>
+        <div className="absolute -bottom-32 left-20 h-96 w-96 animate-blob rounded-full bg-pink-300 opacity-30 blur-3xl filter transition-opacity duration-500 [animation-delay:4s] dark:bg-pink-600 dark:opacity-20 mix-blend-multiply dark:mix-blend-normal"></div>
       </div>
 
       {/* Header with Panic Button and Theme Toggle */}
-      <header className="fixed top-0 z-50 w-full border-b border-gray-200/50 bg-white/80 backdrop-blur-md transition-colors duration-300 dark:border-gray-700/50 dark:bg-gray-800/80">
-        <div className="mx-auto flex max-w-md items-center justify-between px-4 py-3 sm:px-6">
+      <header className="fixed top-0 z-50 w-full border-b border-white/20 bg-white/60 backdrop-blur-2xl transition-all duration-500 dark:border-white/10 dark:bg-gray-900/60 shadow-sm hover:bg-white/70 dark:hover:bg-gray-900/70">
+        <div className="mx-auto flex max-w-md items-center justify-between px-4 py-3 sm:px-6 lg:max-w-5xl">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-teal-600 shadow-lg shadow-teal-500/30 ring-2 ring-teal-400/20">
               <ShieldAlert className="h-5 w-5 text-white" />
@@ -337,8 +334,8 @@ export default function Home() {
       </header>
 
       {/* Chat Display Area */}
-      <div className="mt-20 mb-32 w-full max-w-md flex-1 overflow-y-auto px-4 py-6 sm:px-6">
-        <div className="space-y-4">
+      <div className="mt-20 mb-32 w-full max-w-md flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:max-w-4xl lg:px-8">
+        <div className="space-y-4 lg:space-y-8">
           {error && (
             <div className="rounded-lg bg-red-50 p-4 text-sm text-red-800 dark:bg-red-900/30 dark:text-red-200 animate-fade-in">
               <div className="flex items-center gap-2">
@@ -384,9 +381,9 @@ export default function Home() {
                 }`}
             >
               <div
-                className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-md transition-all duration-300 sm:max-w-[75%] ${msg.role === "user"
-                  ? "rounded-br-sm bg-gradient-to-br from-teal-500 to-teal-600 text-white shadow-teal-500/20"
-                  : "rounded-bl-sm bg-white text-gray-800 shadow-gray-200/50 dark:bg-gray-800 dark:text-gray-100 dark:shadow-gray-900/50"
+                className={`max-w-[85%] rounded-2xl px-5 py-3.5 shadow-md transition-all duration-300 sm:max-w-[75%] ${msg.role === "user"
+                  ? "rounded-br-sm bg-gradient-to-br from-teal-500 to-teal-600 text-white shadow-lg shadow-teal-500/20 border border-teal-400/20"
+                  : "rounded-bl-sm glass-panel text-gray-800 dark:text-gray-100 shadow-sm"
                   }`}
               >
                 <p className="text-base leading-relaxed">{msg.text}</p>
@@ -409,7 +406,7 @@ export default function Home() {
           {/* Thinking State */}
           {isLoading && (
             <div className="flex animate-fade-in justify-start">
-              <div className="max-w-[85%] rounded-2xl rounded-bl-sm bg-white px-4 py-3 shadow-md transition-colors duration-300 dark:bg-gray-800 sm:max-w-[75%]">
+              <div className="max-w-[85%] rounded-2xl rounded-bl-sm glass-panel px-5 py-4 shadow-sm transition-colors duration-300 sm:max-w-[75%]">
                 <div className="flex items-center gap-2">
                   <div className="flex gap-1">
                     <div className="h-2 w-2 animate-bounce rounded-full bg-teal-600 [animation-delay:-0.3s]"></div>
@@ -428,7 +425,7 @@ export default function Home() {
 
       {/* Emergency Helpline Button (Floating) */}
       {showHelpline && (
-        <div className="fixed bottom-24 right-6 z-[60] animate-bounce">
+        <div className="fixed bottom-24 right-6 z-[60] animate-float">
           <a
             href="tel:1195"
             className="flex items-center gap-2 rounded-full bg-red-600 px-6 py-4 font-bold text-white shadow-xl shadow-red-600/40 transition-transform hover:scale-105 active:scale-95"
@@ -442,8 +439,8 @@ export default function Home() {
 
 
       {/* Control Panel Footer */}
-      <footer className="fixed bottom-0 z-50 w-full border-t border-gray-200 bg-white/95 backdrop-blur-sm transition-colors duration-300 dark:border-gray-700 dark:bg-gray-800/95">
-        <div className="mx-auto flex max-w-md items-center justify-between px-6 py-4 sm:px-8">
+      <footer className="fixed bottom-0 z-50 w-full border-t border-white/20 bg-white/60 backdrop-blur-2xl transition-all duration-500 dark:border-white/10 dark:bg-gray-900/60 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.02)]">
+        <div className="mx-auto flex max-w-md items-center justify-between px-6 py-4 sm:px-8 lg:max-w-5xl">
           {/* Mute Toggle */}
           <button
             onClick={toggleMute}
