@@ -270,7 +270,7 @@ export default function Home() {
   };
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center overflow-hidden" style={{ backgroundColor: 'var(--bg-light)' }}>
+    <main className="relative flex min-h-screen flex-col items-center overflow-hidden bg-gray-50 transition-colors duration-500 dark:bg-[#0f1419]">
       {/* Animated Background Elements */}
       {/* Organic Aurora Background */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -287,10 +287,10 @@ export default function Home() {
               <ShieldAlert className="h-5 w-5 text-white animate-sway" style={{ filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))' }} />
             </div>
             <div className="flex flex-col">
-              <h1 className="text-lg font-semibold" style={{ color: 'var(--primary-dark)' }}>
+              <h1 className="text-lg font-semibold text-teal-800 dark:text-teal-400 transition-colors">
                 SafeHaven
               </h1>
-              <p className="text-xs" style={{ color: 'var(--text-light-tertiary)' }}>Confidential Support</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 transition-colors">Confidential Support</p>
             </div>
           </div>
 
@@ -311,8 +311,7 @@ export default function Home() {
             {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
-              className="relative flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-200 hover:scale-110 active:scale-95"
-              style={{ backgroundColor: 'var(--bg-light-secondary)', color: 'var(--text-light)' }}
+              className="relative flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 text-gray-600 transition-all duration-200 hover:scale-110 active:scale-95 dark:bg-gray-800 dark:text-gray-300"
               aria-label="Toggle theme"
             >
               <div className="relative h-5 w-5">
@@ -363,10 +362,10 @@ export default function Home() {
                 </div>
               </div>
               <div className="space-y-3 px-6">
-                <h2 className="text-3xl font-light" style={{ color: 'var(--text-light)' }}>
+                <h2 className="text-3xl font-light text-gray-800 dark:text-gray-100 transition-colors">
                   Welcome to SafeHaven
                 </h2>
-                <p className="text-base leading-relaxed" style={{ color: 'var(--text-light-secondary)' }}>
+                <p className="text-base leading-relaxed text-gray-500 dark:text-gray-400 transition-colors">
                   A safe, confidential space where you can share your thoughts and feelings. Tap the microphone below to begin.
                 </p>
               </div>
