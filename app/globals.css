@@ -1,95 +1,167 @@
 @import "tailwindcss";
 
-/* SafeHaven Theme Configuration */
 :root {
-  /* Light mode colors */
-  --background: #f9fafb;
-  --foreground: #1f2937;
+  --bg-light: #fafbfc;
+  --bg-light-secondary: #f0f4f8;
+  --bg-light-tertiary: #e8eef5;
 
-  /* Teal theme colors (calming, supportive) */
-  --teal-50: #f0fdfa;
-  --teal-100: #ccfbf1;
-  --teal-200: #99f6e4;
-  --teal-300: #5eead4;
-  --teal-400: #2dd4bf;
-  --teal-500: #14b8a6;
-  --teal-600: #0d9488;
-  --teal-700: #0f766e;
-  --teal-800: #115e59;
-  --teal-900: #134e4a;
+  --bg-dark: #0f1419;
+  --bg-dark-secondary: #1a1f2e;
+  --bg-dark-tertiary: #242d3d;
 
-  /* Red for panic/alert */
-  --red-500: #ef4444;
-  --red-600: #dc2626;
-  --red-700: #b91c1c;
+  --text-light: #1a2332;
+  --text-light-secondary: #4a5578;
+  --text-light-tertiary: #8a94b0;
 
-  /* Orange for mute/warning */
-  --orange-100: #ffedd5;
-  --orange-600: #ea580c;
+  --text-dark: #f8f9fb;
+  --text-dark-secondary: #d0d8e8;
+  --text-dark-tertiary: #8a94b0;
+
+  --primary: #4f9e8f;
+  --primary-light: #6db8a5;
+  --primary-lighter: #a8d9ce;
+  --primary-dark: #3a7a6c;
+
+  --secondary: #6b7fa8;
+  --secondary-light: #8a9ec4;
+
+  --accent: #d4737a;
+  --accent-light: #e89b9f;
+
+  --success: #5fb586;
+  --error: #d73a3a;
+  --warning: #d99950;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+}
+
+html.dark {
+  --text-light: var(--text-dark);
+  --text-light-secondary: var(--text-dark-secondary);
+  --text-light-tertiary: var(--text-dark-tertiary);
+  --bg-light: var(--bg-dark);
+  --bg-light-secondary: var(--bg-dark-secondary);
+  --bg-light-tertiary: var(--bg-dark-tertiary);
 }
 
 @theme inline {
-  /* Color palette */
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-
-  --color-teal-50: var(--teal-50);
-  --color-teal-100: var(--teal-100);
-  --color-teal-200: var(--teal-200);
-  --color-teal-300: var(--teal-300);
-  --color-teal-400: var(--teal-400);
-  --color-teal-500: var(--teal-500);
-  --color-teal-600: var(--teal-600);
-  --color-teal-700: var(--teal-700);
-  --color-teal-800: var(--teal-800);
-  --color-teal-900: var(--teal-900);
-
-  --color-red-500: var(--red-500);
-  --color-red-600: var(--red-600);
-  --color-red-700: var(--red-700);
-
-  --color-orange-100: var(--orange-100);
-  --color-orange-600: var(--orange-600);
-
-  /* Typography */
+  --color-background: var(--bg-light);
+  --color-foreground: var(--text-light);
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
-
-  /* Spacing for accessibility (large touch targets) */
   --spacing-safe: 44px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #111827;
-    --foreground: #f3f4f6;
-  }
+* {
+  @apply transition-all duration-200 ease-out;
 }
 
-/* Global styles */
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--bg-light);
+  color: var(--text-light);
   font-family: var(--font-sans);
 }
 
-/* Smooth transitions for interactive elements */
-* {
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
+html {
+  scroll-behavior: smooth;
 }
 
-/* Custom animations */
 @keyframes fade-in {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(12px);
   }
-
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes gentle-float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes pulse-soft {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes typing {
+  0% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+@keyframes bot-thinking {
+  0%, 20%, 50%, 80%, 100% {
+    opacity: 1;
+  }
+  40% {
+    opacity: 0.3;
+  }
+  60% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes sway {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(1deg);
+  }
+  75% {
+    transform: rotate(-1deg);
   }
 }
 

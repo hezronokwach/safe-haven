@@ -270,7 +270,7 @@ export default function Home() {
   };
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center overflow-hidden bg-gradient-to-br from-gray-50 via-teal-50/30 to-blue-50/20 transition-colors duration-500 dark:from-gray-900 dark:via-teal-950/20 dark:to-blue-950/10">
+    <main className="relative flex min-h-screen flex-col items-center overflow-hidden" style={{ backgroundColor: 'var(--bg-light)' }}>
       {/* Animated Background Elements */}
       {/* Organic Aurora Background */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -283,12 +283,15 @@ export default function Home() {
       <header className="fixed top-0 z-50 w-full border-b border-white/20 bg-white/60 backdrop-blur-2xl transition-all duration-500 dark:border-white/10 dark:bg-gray-900/60 shadow-sm hover:bg-white/70 dark:hover:bg-gray-900/70">
         <div className="mx-auto flex max-w-md items-center justify-between px-4 py-3 sm:px-6 lg:max-w-5xl">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-teal-600 shadow-lg shadow-teal-500/30 ring-2 ring-teal-400/20">
-              <ShieldAlert className="h-5 w-5 text-white" />
+            <div className="relative flex h-11 w-11 items-center justify-center rounded-xl shadow-sm" style={{ background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%)', boxShadow: '0 8px 16px rgba(79, 158, 143, 0.2)' }}>
+              <ShieldAlert className="h-5 w-5 text-white animate-sway" style={{ filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))' }} />
             </div>
-            <h1 className="bg-gradient-to-r from-teal-600 to-teal-700 bg-clip-text text-xl font-bold tracking-tight text-transparent dark:from-teal-400 dark:to-teal-500">
-              SafeHaven
-            </h1>
+            <div className="flex flex-col">
+              <h1 className="text-lg font-semibold" style={{ color: 'var(--primary-dark)' }}>
+                SafeHaven
+              </h1>
+              <p className="text-xs" style={{ color: 'var(--text-light-tertiary)' }}>Confidential Support</p>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
@@ -308,26 +311,31 @@ export default function Home() {
             {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-700 shadow-sm transition-all duration-200 hover:scale-110 hover:bg-gray-200 active:scale-95 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+              className="relative flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-200 hover:scale-110 active:scale-95"
+              style={{ backgroundColor: 'var(--bg-light-secondary)', color: 'var(--text-light)' }}
               aria-label="Toggle theme"
             >
-              {!mounted ? (
-                <Moon className="h-4 w-4" />
-              ) : isDarkMode ? (
-                <Sun className="h-4 w-4" />
-              ) : (
-                <Moon className="h-4 w-4" />
-              )}
+              <div className="relative h-5 w-5">
+                {!mounted ? (
+                  <Moon className="h-5 w-5 absolute inset-0" />
+                ) : isDarkMode ? (
+                  <Sun className="h-5 w-5 absolute inset-0 animate-fade-in" />
+                ) : (
+                  <Moon className="h-5 w-5 absolute inset-0 animate-fade-in" />
+                )}
+              </div>
             </button>
 
             {/* Panic Button */}
             <button
               onClick={handlePanic}
-              className="group flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-700 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-red-600/30 transition-all duration-200 hover:scale-105 hover:shadow-xl hover:shadow-red-600/40 active:scale-95"
+              className="group relative overflow-hidden flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:scale-105 active:scale-95"
+              style={{ background: 'linear-gradient(135deg, #d73a3a 0%, #b91c1c 100%)', boxShadow: '0 8px 16px rgba(215, 58, 58, 0.25)' }}
               aria-label="Quick exit to safe website"
             >
-              <LogOut className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-              <span className="hidden sm:inline">QUICK EXIT</span>
+              <div className="absolute inset-0 translate-x-full group-hover:translate-x-0 transition-transform duration-300" style={{ background: 'rgba(0, 0, 0, 0.1)' }}></div>
+              <LogOut className="h-4 w-4 relative transition-transform group-hover:translate-x-0.5" />
+              <span className="hidden sm:inline relative">EXIT</span>
             </button>
           </div>
         </div>
@@ -337,37 +345,35 @@ export default function Home() {
       <div className="mt-20 mb-32 w-full max-w-md flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:max-w-4xl lg:px-8">
         <div className="space-y-4 lg:space-y-8">
           {error && (
-            <div className="rounded-lg bg-red-50 p-4 text-sm text-red-800 dark:bg-red-900/30 dark:text-red-200 animate-fade-in">
+            <div className="rounded-xl p-4 text-sm animate-fade-in" style={{ backgroundColor: 'rgba(215, 58, 58, 0.08)', borderLeft: '4px solid var(--error)', color: 'var(--error)' }}>
               <div className="flex items-center gap-2">
                 <ShieldAlert className="h-4 w-4" />
                 <span className="font-medium">Microphone Error:</span>
               </div>
-              <p className="mt-1 ml-6">{error}</p>
+              <p className="mt-2 ml-6 text-sm opacity-90">{error}</p>
             </div>
           )}
 
           {messages.length === 0 && !error && (
-            <div className="flex min-h-[50vh] flex-col items-center justify-center space-y-6 text-center">
+            <div className="flex min-h-[60vh] flex-col items-center justify-center space-y-8 text-center">
               <div className="relative">
-                {/* Animated pulse rings */}
-                <div className="absolute inset-0 animate-ping rounded-full bg-teal-400 opacity-20"></div>
-                <div className="absolute inset-0 animate-pulse rounded-full bg-teal-400 opacity-30"></div>
-                <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-teal-400 to-teal-600 shadow-2xl shadow-teal-500/40">
-                  <Mic className="h-10 w-10 text-white" />
+                <div className="absolute inset-0 rounded-full animate-gentle-float" style={{ background: 'radial-gradient(circle, rgba(79, 158, 143, 0.2) 0%, transparent 70%)', width: '120px', height: '120px' }}></div>
+                <div className="relative flex h-24 w-24 items-center justify-center rounded-full shadow-xl" style={{ background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%)', boxShadow: '0 20px 40px rgba(79, 158, 143, 0.25)' }}>
+                  <Mic className="h-12 w-12 text-white animate-sway" />
                 </div>
               </div>
-              <div className="space-y-2 px-6">
-                <h2 className="text-2xl font-semibold text-gray-800 transition-colors duration-300 dark:text-gray-100">
+              <div className="space-y-3 px-6">
+                <h2 className="text-3xl font-light" style={{ color: 'var(--text-light)' }}>
                   Welcome to SafeHaven
                 </h2>
-                <p className="text-base text-gray-600 transition-colors duration-300 dark:text-gray-400">
-                  A safe space for you. Tap the microphone below to start a confidential conversation.
+                <p className="text-base leading-relaxed" style={{ color: 'var(--text-light-secondary)' }}>
+                  A safe, confidential space where you can share your thoughts and feelings. Tap the microphone below to begin.
                 </p>
               </div>
-              <div className="flex items-center gap-2 rounded-full bg-teal-50 px-4 py-2 transition-colors duration-300 dark:bg-teal-900/30">
-                <div className="h-2 w-2 animate-pulse rounded-full bg-teal-600"></div>
-                <span className="text-sm font-medium text-teal-700 transition-colors duration-300 dark:text-teal-400">
-                  Private & Secure
+              <div className="flex items-center gap-2 rounded-full px-6 py-3 animate-pulse-soft" style={{ backgroundColor: 'var(--primary-lighter)', color: 'var(--primary-dark)' }}>
+                <div className="h-2 w-2 rounded-full animate-pulse-soft" style={{ backgroundColor: 'var(--primary)' }}></div>
+                <span className="text-sm font-medium">
+                  End-to-end Private & Secure
                 </span>
               </div>
             </div>
@@ -377,14 +383,23 @@ export default function Home() {
           {messages.map((msg, index) => (
             <div
               key={index}
-              className={`flex animate-fade-in ${msg.role === "user" ? "justify-end" : "justify-start"
-                }`}
+              className={`flex animate-fade-in ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+              style={{ animationDelay: `${index * 50}ms` }}
             >
               <div
                 className={`max-w-[85%] rounded-2xl px-5 py-3.5 shadow-md transition-all duration-300 sm:max-w-[75%] ${msg.role === "user"
                   ? "rounded-br-sm bg-gradient-to-br from-teal-500 to-teal-600 text-white shadow-lg shadow-teal-500/20 border border-teal-400/20"
                   : "rounded-bl-sm glass-panel text-gray-800 dark:text-gray-100 shadow-sm"
                   }`}
+                style={{
+                  background: msg.role === "user"
+                    ? 'linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%)'
+                    : 'var(--bg-light-secondary)',
+                  color: msg.role === "user" ? 'white' : 'var(--text-light)',
+                  boxShadow: msg.role === "user"
+                    ? '0 6px 20px rgba(79, 158, 143, 0.15)'
+                    : '0 2px 8px rgba(0, 0, 0, 0.05)'
+                }}
               >
                 <p className="text-base leading-relaxed">{msg.text}</p>
               </div>
@@ -394,10 +409,10 @@ export default function Home() {
           {/* Live Transcript (Ghost Message) */}
           {isListening && transcript && (
             <div className="flex animate-fade-in justify-end">
-              <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-gradient-to-br from-teal-500/70 to-teal-600/70 px-4 py-3 text-white shadow-md shadow-teal-500/10 backdrop-blur-sm transition-all duration-300 sm:max-w-[75%]">
-                <p className="text-base leading-relaxed opacity-90">
+              <div className="max-w-[80%] rounded-2xl rounded-tr-none px-5 py-4 text-white sm:max-w-[70%]" style={{ background: 'linear-gradient(135deg, rgba(79, 158, 143, 0.9) 0%, rgba(109, 184, 165, 0.9) 100%)', backdropFilter: 'blur(8px)' }}>
+                <p className="text-base leading-relaxed opacity-95">
                   {transcript}
-                  <span className="animate-pulse">|</span>
+                  <span className="animate-typing ml-1 inline-block">●</span>
                 </p>
               </div>
             </div>
@@ -413,8 +428,8 @@ export default function Home() {
                     <div className="h-2 w-2 animate-bounce rounded-full bg-teal-600 [animation-delay:-0.15s]"></div>
                     <div className="h-2 w-2 animate-bounce rounded-full bg-teal-600"></div>
                   </div>
-                  <span className="text-sm text-gray-500 transition-colors duration-300 dark:text-gray-400">
-                    SafeHaven is thinking...
+                  <span className="text-sm" style={{ color: 'var(--text-light-secondary)' }}>
+                    SafeHaven is listening...
                   </span>
                 </div>
               </div>
@@ -444,10 +459,12 @@ export default function Home() {
           {/* Mute Toggle */}
           <button
             onClick={toggleMute}
-            className={`group flex h-12 w-12 items-center justify-center rounded-full transition-all duration-200 hover:scale-110 active:scale-95 ${isMuted
-              ? "bg-orange-100 text-orange-600 shadow-lg shadow-orange-500/20 dark:bg-orange-900/40 dark:text-orange-400"
-              : "bg-gray-100 text-gray-600 shadow-md hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-              }`}
+            className="group relative flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-200 hover:scale-110 active:scale-95"
+            style={{
+              backgroundColor: isMuted ? 'rgba(217, 119, 122, 0.15)' : 'var(--bg-light-secondary)',
+              color: isMuted ? 'var(--accent)' : 'var(--text-light)',
+              boxShadow: isMuted ? '0 4px 12px rgba(217, 119, 122, 0.1)' : 'none'
+            }}
             aria-label={isMuted ? "Unmute audio" : "Mute audio"}
           >
             {isMuted ? (
@@ -457,32 +474,42 @@ export default function Home() {
             )}
           </button>
 
-          {/* Microphone Button */}
+          {/* Microphone Button - Center */}
           <button
             onClick={toggleListening}
-            className={`group relative flex h-16 w-16 items-center justify-center rounded-full shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95 ${isListening
-              ? "animate-pulse bg-gradient-to-br from-red-500 to-red-600 shadow-red-500/50"
-              : "bg-gradient-to-br from-teal-500 to-teal-600 shadow-teal-500/40 hover:from-teal-600 hover:to-teal-700 hover:shadow-teal-500/60"
+            className={`group relative flex h-20 w-20 items-center justify-center rounded-full shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95 ${isListening
+              ? "animate-pulse"
+              : "hover:shadow-lg"
               }`}
+            style={{
+              background: isListening
+                ? 'linear-gradient(135deg, var(--error) 0%, #b91c1c 100%)'
+                : 'linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%)',
+              boxShadow: isListening
+                ? '0 12px 32px rgba(215, 58, 58, 0.3)'
+                : '0 12px 32px rgba(79, 158, 143, 0.2)'
+            }}
             aria-label={isListening ? "Stop recording" : "Start recording"}
           >
             {isListening && (
-              <div className="absolute inset-0 animate-ping rounded-full bg-red-400 opacity-75"></div>
+              <div className="absolute inset-0 rounded-full animate-ping" style={{ background: 'rgba(255, 255, 255, 0.3)' }}></div>
             )}
             {isListening ? (
-              <MicOff className="relative h-8 w-8 text-white transition-transform group-hover:scale-110" />
+              <MicOff className="relative h-9 w-9 text-white transition-transform group-hover:scale-110" />
             ) : (
-              <Mic className="relative h-8 w-8 text-white transition-transform group-hover:scale-110" />
+              <Mic className="relative h-9 w-9 text-white transition-transform group-hover:scale-110" />
             )}
           </button>
 
           {/* Info/Safety Icon - Toggles Helpline */}
           <button
             onClick={() => setShowHelpline(!showHelpline)}
-            className={`group flex h-12 w-12 items-center justify-center rounded-full transition-all duration-200 hover:scale-110 active:scale-95 ${showHelpline
-              ? "bg-red-100 text-red-600 shadow-inner dark:bg-red-900/30 dark:text-red-400"
-              : "bg-gray-100 text-gray-600 shadow-md hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-              }`}
+            className="group relative flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-200 hover:scale-110 active:scale-95"
+            style={{
+              backgroundColor: showHelpline ? 'rgba(215, 58, 58, 0.15)' : 'var(--bg-light-secondary)',
+              color: showHelpline ? 'var(--error)' : 'var(--text-light)',
+              boxShadow: showHelpline ? '0 4px 12px rgba(215, 58, 58, 0.1)' : 'none'
+            }}
             aria-label="Toggle emergency helpline"
           >
             <ShieldAlert className="h-6 w-6 transition-transform group-hover:scale-110" />
