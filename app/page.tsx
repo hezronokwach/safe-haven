@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Mic, MicOff, Volume2, VolumeX, ShieldAlert, LogOut, Sun, Moon, Phone } from "lucide-react";
+import { Mic, MicOff, Volume2, VolumeX, ShieldAlert, LogOut, Sun, Moon, Phone, User } from "lucide-react";
 import useSpeechRecognition from "./hooks/use-speech-recognition";
 
 interface Message {
@@ -17,6 +17,7 @@ export default function Home() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [showHelpline, setShowHelpline] = useState(false);
+  const [voiceGender, setVoiceGender] = useState<'female' | 'male'>('female');
 
   // Audio playback ref
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -30,6 +31,22 @@ export default function Home() {
 
     setIsDarkMode(shouldBeDark);
     document.documentElement.classList.toggle("dark", shouldBeDark);
+
+    // Warm up speech synthesis voices (fixes issue where voices return empty initially)
+    const loadVoices = () => {
+      window.speechSynthesis.getVoices();
+    };
+
+    if ("speechSynthesis" in window) {
+      loadVoices();
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+
+    return () => {
+      if ("speechSynthesis" in window) {
+        window.speechSynthesis.onvoiceschanged = null;
+      }
+    }
   }, []);
 
   // Handle final transcript when listening stops
@@ -63,51 +80,83 @@ export default function Home() {
       return;
     }
 
-    try {
-      const response = await fetch("/api/speak", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
-      });
+    // FORCE BROWSER TTS (Temporary override for Voice Selection feature)
+    const useBrowserTTS = true;
 
-      if (!response.ok) {
-        const err = await response.json();
-        console.error("TTS API Error:", err);
-        throw new Error("Failed to generate speech");
+    if (!useBrowserTTS) {
+      try {
+        const response = await fetch("/api/speak", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+        });
+
+        if (!response.ok) {
+          const err = await response.json();
+          console.error("TTS API Error:", err);
+          throw new Error("Failed to generate speech");
+        }
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+
+        if (audioRef.current) {
+          audioRef.current.pause();
+        }
+
+        const audio = new Audio(url);
+        audioRef.current = audio;
+        audio.play();
+        return; // Exit if ElevenLabs succeeded
+
+      } catch (error) {
+        console.error("ElevenLabs failed, switching to browser TTS:", error);
+      }
+    }
+
+    // Browser TTS Fallback (or Primary if useBrowserTTS is true)
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+
+      // Select voice based on preferred gender
+      let voices = window.speechSynthesis.getVoices();
+
+      // Retry getting voices if empty (common browser quirk)
+      if (voices.length === 0) {
+        window.speechSynthesis.getVoices();
+        voices = window.speechSynthesis.getVoices();
       }
 
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
+      console.log("Available voices:", voices.map(v => v.name)); // Debugging
 
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
+      let preferredVoice: SpeechSynthesisVoice | undefined;
 
-      const audio = new Audio(url);
-      audioRef.current = audio;
-      audio.play();
-
-    } catch (error) {
-      console.error("ElevenLabs failed, switching to browser TTS:", error);
-
-      if ("speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-
-        // Select a preferred soothing female voice
-        const voices = window.speechSynthesis.getVoices();
-        const preferredVoice = voices.find(v =>
+      if (voiceGender === 'male') {
+        preferredVoice = voices.find(v =>
+          v.name.includes("Male") ||
+          v.name.includes("David") ||
+          v.name.includes("Microsoft David") ||
+          v.name.includes("Google UK English Male")
+        );
+      } else {
+        preferredVoice = voices.find(v =>
           v.name.includes("Female") ||
           v.name.includes("Samantha") ||
+          v.name.includes("Zira") ||
+          v.name.includes("Microsoft Zira") ||
+          v.name.includes("Hazel") ||
           v.name.includes("Google US English")
         );
-
-        if (preferredVoice) utterance.voice = preferredVoice;
-        utterance.rate = 0.9;
-        utterance.pitch = 1.0;
-
-        window.speechSynthesis.speak(utterance);
       }
+
+      if (preferredVoice) utterance.voice = preferredVoice;
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+
+
+
+      window.speechSynthesis.speak(utterance);
     }
   };
 
@@ -167,6 +216,13 @@ export default function Home() {
     setIsDarkMode(newTheme);
     document.documentElement.classList.toggle("dark", newTheme);
     localStorage.setItem("theme", newTheme ? "dark" : "light");
+  };
+
+  /**
+   * Toggles between Male and Female voices.
+   */
+  const toggleVoice = () => {
+    setVoiceGender(prev => prev === 'female' ? 'male' : 'female');
   };
 
   /**
@@ -239,6 +295,19 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Voice Toggle */}
+            <button
+              onClick={toggleVoice}
+              className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold shadow-sm transition-all duration-200 hover:scale-105 active:scale-95 ${voiceGender === 'male'
+                ? "bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/40 dark:text-blue-300"
+                : "bg-pink-100 text-pink-700 hover:bg-pink-200 dark:bg-pink-900/40 dark:text-pink-300"
+                }`}
+              aria-label={`Current voice: ${voiceGender}. Click to switch.`}
+            >
+              <User className="h-3.5 w-3.5" />
+              <span>{voiceGender === 'male' ? 'MALE' : 'FEMALE'}</span>
+            </button>
+
             {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
@@ -369,6 +438,8 @@ export default function Home() {
           </a>
         </div>
       )}
+
+
 
       {/* Control Panel Footer */}
       <footer className="fixed bottom-0 z-50 w-full border-t border-gray-200 bg-white/95 backdrop-blur-sm transition-colors duration-300 dark:border-gray-700 dark:bg-gray-800/95">
