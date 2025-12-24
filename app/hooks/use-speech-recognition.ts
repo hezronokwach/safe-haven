@@ -2,6 +2,32 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 
+// Define types for Web Speech API
+interface SpeechRecognitionEvent extends Event {
+    results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+    error: string;
+}
+
+interface SpeechRecognition extends EventTarget {
+    continuous: boolean;
+    interimResults: boolean;
+    lang: string;
+    start: () => void;
+    stop: () => void;
+    onstart: ((this: SpeechRecognition, ev: Event) => void) | null;
+    onend: ((this: SpeechRecognition, ev: Event) => void) | null;
+    onresult: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => void) | null;
+    onerror: ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => void) | null;
+}
+
+interface WindowWithSpeech extends Window {
+    SpeechRecognition?: { new(): SpeechRecognition };
+    webkitSpeechRecognition?: { new(): SpeechRecognition };
+}
+
 export interface UseSpeechRecognitionReturn {
     isListening: boolean;
     transcript: string;
@@ -18,19 +44,22 @@ export default function useSpeechRecognition(): UseSpeechRecognitionReturn {
     const [hasRecognitionSupport, setHasRecognitionSupport] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Use a ref to store the recognition instance to persist it across renders
-    const recognitionRef = useRef<any>(null);
+    // Use a ref to store the recognition instance
+    const recognitionRef = useRef<SpeechRecognition | null>(null);
 
     useEffect(() => {
+        const windowWithSpeech = window as unknown as WindowWithSpeech;
         // Check for browser support
         if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
             setHasRecognitionSupport(true);
 
             // Initialize recognition instance
-            const SpeechRecognition =
-                (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+            const SpeechRecognitionConstructor =
+                windowWithSpeech.SpeechRecognition || windowWithSpeech.webkitSpeechRecognition;
 
-            const recognition = new SpeechRecognition();
+            if (!SpeechRecognitionConstructor) return;
+
+            const recognition = new SpeechRecognitionConstructor();
             recognition.continuous = true; // Keep listening even after user pauses
             recognition.interimResults = true; // Show results while speaking
             recognition.lang = "en-US"; // Default to English, can be parameterized later
@@ -44,7 +73,7 @@ export default function useSpeechRecognition(): UseSpeechRecognitionReturn {
                 setIsListening(false);
             };
 
-            recognition.onresult = (event: any) => {
+            recognition.onresult = (event: SpeechRecognitionEvent) => {
                 let currentTranscript = "";
                 for (let i = 0; i < event.results.length; i++) {
                     const result = event.results[i];
@@ -57,7 +86,7 @@ export default function useSpeechRecognition(): UseSpeechRecognitionReturn {
                 setTranscript(currentTranscript);
             };
 
-            recognition.onerror = (event: any) => {
+            recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
                 console.error("Speech recognition error", event.error);
                 if (event.error === 'not-allowed' || event.error === 'permission-denied') {
                     setError("Microphone access blocked. Please enable permissions.");
@@ -87,7 +116,8 @@ export default function useSpeechRecognition(): UseSpeechRecognitionReturn {
         if (recognitionRef.current) {
             try {
                 recognitionRef.current.start();
-            } catch (error: any) {
+            } catch (err: unknown) {
+                const error = err as Error;
                 if (error.name === 'InvalidStateError' || error.message?.includes('already started')) {
                     // Ignore "already started" errors, just update state if needed
                     console.log("Speech recognition already active.");
