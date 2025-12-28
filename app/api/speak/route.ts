@@ -2,17 +2,19 @@ import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
     try {
-        const { text } = await req.json();
+        // Determine Voice ID based on gender
+        const { text, gender } = await req.json();
+        const API_KEY = process.env.ELEVENLABS_API_KEY;
 
-        if (!text) {
-            return NextResponse.json(
-                { error: "Text is required" },
-                { status: 400 }
-            );
+        let VOICE_ID = process.env.ELEVENLABS_VOICE_ID_FEMALE; // Default to Female
+        if (gender === 'male' && process.env.ELEVENLABS_VOICE_ID_MALE) {
+            VOICE_ID = process.env.ELEVENLABS_VOICE_ID_MALE;
         }
 
-        const API_KEY = process.env.ELEVENLABS_API_KEY;
-        const VOICE_ID = process.env.NEXT_PUBLIC_ELEVENLABS_VOICE_ID || "JBFqnCBsd6RMkjVDRZzb"; // Default to a soothing voice if not set
+        // Fallback for missing env vars
+        if (!VOICE_ID) {
+            VOICE_ID = "21m00Tcm4TlvDq8ikWAM"; // Hardcoded fallback (Rachel)
+        }
 
         if (!API_KEY) {
             return NextResponse.json(
