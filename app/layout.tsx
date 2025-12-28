@@ -14,8 +14,23 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SafeHaven - Voice Support Companion",
-  description: "A safe, empathetic AI companion for GBV survivors offering voice-based support and emergency assistance.",
+  title: "SafeHaven",
+  description: "Confidential AI Voice Companion for Survivors",
+  manifest: "/manifest.json",
+  keywords: ["safety", "survivor", "support", "ai", "voice"],
+  themeColor: "#0f1419",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "SafeHaven",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+};
+
+export const viewport = {
+  themeColor: "#0f1419",
 };
 
 export default function RootLayout({
