@@ -32,21 +32,7 @@ export default function Home() {
     setIsDarkMode(shouldBeDark);
     document.documentElement.classList.toggle("dark", shouldBeDark);
 
-    // Warm up speech synthesis voices (fixes issue where voices return empty initially)
-    const loadVoices = () => {
-      window.speechSynthesis.getVoices();
-    };
 
-    if ("speechSynthesis" in window) {
-      loadVoices();
-      window.speechSynthesis.onvoiceschanged = loadVoices;
-    }
-
-    return () => {
-      if ("speechSynthesis" in window) {
-        window.speechSynthesis.onvoiceschanged = null;
-      }
-    }
   }, []);
 
   // Handle final transcript when listening stops
@@ -80,84 +66,42 @@ export default function Home() {
       return;
     }
 
-    // FORCE BROWSER TTS (Temporary override for Voice Selection feature)
-    const useBrowserTTS = true;
+    // Use Server-Side TTS (ElevenLabs)
+    // Pass the selected gender so the server can pick the correct Voice ID
+    try {
+      const response = await fetch("/api/speak", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text,
+          gender: voiceGender
+        }),
+      });
 
-    if (!useBrowserTTS) {
-      try {
-        const response = await fetch("/api/speak", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text }),
-        });
-
-        if (!response.ok) {
-          const err = await response.json();
-          console.error("TTS API Error:", err);
-          throw new Error("Failed to generate speech");
-        }
-
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-
-        if (audioRef.current) {
-          audioRef.current.pause();
-        }
-
-        const audio = new Audio(url);
-        audioRef.current = audio;
-        audio.play();
-        return; // Exit if ElevenLabs succeeded
-
-      } catch (error) {
-        console.error("ElevenLabs failed, switching to browser TTS:", error);
+      if (!response.ok) {
+        const err = await response.json();
+        console.error("TTS API Error:", err);
+        throw new Error("Failed to generate speech");
       }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.play();
+      return; // Exit if ElevenLabs succeeded
+
+    } catch (error) {
+      console.error("ElevenLabs failed, switching to browser TTS:", error);
     }
 
-    // Browser TTS Fallback (or Primary if useBrowserTTS is true)
-    if ("speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-
-      // Select voice based on preferred gender
-      let voices = window.speechSynthesis.getVoices();
-
-      // Retry getting voices if empty (common browser quirk)
-      if (voices.length === 0) {
-        window.speechSynthesis.getVoices();
-        voices = window.speechSynthesis.getVoices();
-      }
-
-      console.log("Available voices:", voices.map(v => v.name)); // Debugging
-
-      let preferredVoice: SpeechSynthesisVoice | undefined;
-
-      if (voiceGender === 'male') {
-        preferredVoice = voices.find(v =>
-          v.name.includes("Male") ||
-          v.name.includes("David") ||
-          v.name.includes("Microsoft David") ||
-          v.name.includes("Google UK English Male")
-        );
-      } else {
-        preferredVoice = voices.find(v =>
-          v.name.includes("Female") ||
-          v.name.includes("Samantha") ||
-          v.name.includes("Zira") ||
-          v.name.includes("Microsoft Zira") ||
-          v.name.includes("Hazel") ||
-          v.name.includes("Google US English")
-        );
-      }
-
-      if (preferredVoice) utterance.voice = preferredVoice;
-      utterance.rate = 1.0;
-      utterance.pitch = 1.0;
 
 
-
-      window.speechSynthesis.speak(utterance);
-    }
   };
 
   /**
