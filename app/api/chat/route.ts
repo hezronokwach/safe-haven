@@ -45,16 +45,19 @@ export async function POST(req: Request) {
         });
 
         const chat = model.startChat({
-            history: (history || []).slice(-10), // Keep only last 10 messages to save tokens
+            history: (history || []).slice(-10),
             generationConfig: {
-                maxOutputTokens: 200,
+                maxOutputTokens: 500, // Increased to prevent truncated JSON
                 temperature: 0.7,
                 responseMimeType: "application/json",
             },
         });
 
         const result = await chat.sendMessage(message);
-        const responseText = result.response.text();
+        let responseText = result.response.text();
+
+        // Sanitize markdown if present (e.g. ```json ... ```)
+        responseText = responseText.replace(/```json|```/g, "").trim();
 
         return NextResponse.json(JSON.parse(responseText));
     } catch (error) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Mic, MicOff, Volume2, VolumeX, ShieldAlert, LogOut, Sun, Moon, Phone, User } from "lucide-react";
+import { Mic, MicOff, Volume2, VolumeX, ShieldAlert, LogOut, Sun, Moon, Phone, User, Leaf, Ear } from "lucide-react";
 import useSpeechRecognition from "./hooks/use-speech-recognition";
 
 interface Message {
@@ -23,6 +23,17 @@ export default function Home() {
 
   // Audio playback ref
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const sfxAudioRef = useRef<HTMLAudioElement | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
+  const [isGrounding, setIsGrounding] = useState(false);
+  const [isWhispering, setIsWhispering] = useState(false);
+  const [isProcessingWhisper, setIsProcessingWhisper] = useState(false);
+
+  // Alignment / Caption State
+  const [captionText, setCaptionText] = useState("");
+  const [highlightIndex, setHighlightIndex] = useState(-1);
 
   // Initialize theme after mount to avoid hydration mismatch
   useEffect(() => {
@@ -96,6 +107,28 @@ export default function Home() {
 
       const audio = new Audio(url);
       audioRef.current = audio;
+
+      // Setup Visual Alignment (Karaoke)
+      setCaptionText(text);
+      setHighlightIndex(-1);
+
+      const words = text.split(" ");
+      audio.ontimeupdate = () => {
+        if (audio.duration && audio.duration > 0) {
+          const progress = audio.currentTime / audio.duration;
+          // Simple linear mapping
+          const index = Math.min(
+            Math.floor(progress * words.length),
+            words.length - 1
+          );
+          setHighlightIndex(index);
+        }
+      };
+      audio.onended = () => {
+        setCaptionText("");
+        setHighlightIndex(-1);
+      };
+
       audio.play();
       return; // Exit if ElevenLabs succeeded
 
@@ -180,12 +213,113 @@ export default function Home() {
   };
 
   /**
+   * Whisper Mode: Record -> Isolate -> Transcribe
+   */
+  const toggleWhisper = async () => {
+    if (isWhispering) {
+      // STOP Recording
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
+      }
+      setIsWhispering(false);
+      setIsProcessingWhisper(true);
+    } else {
+      // START Recording
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new MediaRecorder(stream);
+        mediaRecorderRef.current = mediaRecorder;
+        audioChunksRef.current = [];
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            audioChunksRef.current.push(event.data);
+          }
+        };
+
+        mediaRecorder.onstop = async () => {
+          // Combine chunks
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+
+          // Send to Isolate API
+          const formData = new FormData();
+          formData.append("audio", audioBlob);
+
+          try {
+            const res = await fetch("/api/isolate", {
+              method: "POST",
+              body: formData,
+            });
+
+            if (!res.ok) throw new Error("Isolation failed");
+
+            const data = await res.json();
+            if (data.text) {
+              handleUserMessage(data.text); // Send cleaned text to chat
+            }
+          } catch (err) {
+            console.error("Whisper error:", err);
+            // Fallback: prompt user?
+          } finally {
+            setIsProcessingWhisper(false);
+            // Stop all tracks to release mic
+            stream.getTracks().forEach(track => track.stop());
+          }
+        };
+
+        mediaRecorder.start();
+        setIsWhispering(true);
+
+      } catch (err) {
+        console.error("Could not start recording:", err);
+      }
+    }
+  };
+
+  /**
+   * Toggles Grounding (SFX) mode.
+   */
+  const toggleGrounding = async () => {
+    if (isGrounding) {
+      // Stop
+      if (sfxAudioRef.current) {
+        sfxAudioRef.current.pause();
+        sfxAudioRef.current = null;
+      }
+      setIsGrounding(false);
+    } else {
+      // Start
+      setIsGrounding(true);
+      try {
+        // Simple local selection
+        const sounds = ["/sounds/rain.mp3", "/sounds/ocean.mp3"];
+        const randomSound = sounds[Math.floor(Math.random() * sounds.length)];
+
+        const audio = new Audio(randomSound);
+        audio.loop = true;
+        audio.volume = 0.5;
+        sfxAudioRef.current = audio;
+        audio.play();
+
+      } catch (err) {
+        console.error(err);
+        setIsGrounding(false);
+      }
+    }
+  };
+
+  /**
    * Panic Button Logic - Immediate redirect + Stop Audio
    */
   const handlePanic = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current = null;
+    }
+    if (sfxAudioRef.current) {
+      sfxAudioRef.current.pause();
+      sfxAudioRef.current = null;
+      setIsGrounding(false);
     }
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
@@ -216,6 +350,10 @@ export default function Home() {
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
+      }
+      if (sfxAudioRef.current) {
+        sfxAudioRef.current.pause();
+        setIsGrounding(false); // Stop the mode visually too
       }
       if ("speechSynthesis" in window) {
         window.speechSynthesis.cancel();
@@ -366,10 +504,28 @@ export default function Home() {
                     : '0 2px 8px rgba(0, 0, 0, 0.05)'
                 }}
               >
-                <p className="text-base leading-relaxed">{msg.text}</p>
+                {msg.text === captionText && msg.role === "ai" ? (
+                  <p className="text-base leading-relaxed">
+                    {msg.text.split(" ").map((word, i) => (
+                      <span
+                        key={i}
+                        className={`mx-0.5 inline-block transition-all duration-200 ${i === highlightIndex
+                          ? "font-bold text-teal-600 dark:text-teal-400 scale-105"
+                          : "opacity-100"
+                          }`}
+                      >
+                        {word}
+                      </span>
+                    ))}
+                  </p>
+                ) : (
+                  <p className="text-base leading-relaxed">{msg.text}</p>
+                )}
               </div>
             </div>
           ))}
+
+
 
           {/* Live Transcript (Ghost Message) */}
           {isListening && transcript && (
@@ -421,23 +577,39 @@ export default function Home() {
       {/* Control Panel Footer */}
       <footer className="fixed bottom-0 z-50 w-full border-t border-white/20 bg-white/60 backdrop-blur-2xl transition-all duration-500 dark:border-white/10 dark:bg-gray-900/60 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.02)]">
         <div className="mx-auto flex max-w-md items-center justify-between px-6 py-4 sm:px-8 lg:max-w-5xl">
-          {/* Mute Toggle */}
-          <button
-            onClick={toggleMute}
-            className="group relative flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-200 hover:scale-110 active:scale-95"
-            style={{
-              backgroundColor: isMuted ? 'rgba(217, 119, 122, 0.15)' : 'var(--bg-light-secondary)',
-              color: isMuted ? 'var(--accent)' : 'var(--text-light)',
-              boxShadow: isMuted ? '0 4px 12px rgba(217, 119, 122, 0.1)' : 'none'
-            }}
-            aria-label={isMuted ? "Unmute audio" : "Mute audio"}
-          >
-            {isMuted ? (
-              <VolumeX className="h-6 w-6 transition-transform group-hover:scale-110" />
-            ) : (
-              <Volume2 className="h-6 w-6 transition-transform group-hover:scale-110" />
-            )}
-          </button>
+          <div className="flex items-center gap-3">
+            {/* Grounding Button */}
+            <button
+              onClick={toggleGrounding}
+              className="group relative flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-200 hover:scale-110 active:scale-95"
+              style={{
+                backgroundColor: isGrounding ? 'rgba(79, 158, 143, 0.15)' : 'var(--bg-light-secondary)',
+                color: isGrounding ? 'var(--primary)' : 'var(--text-light)',
+                boxShadow: isGrounding ? '0 4px 12px rgba(79, 158, 143, 0.1)' : 'none'
+              }}
+              aria-label={isGrounding ? "Stop grounding" : "Start grounding"}
+            >
+              <Leaf className={`h-6 w-6 transition-transform group-hover:scale-110 ${isGrounding ? 'animate-pulse' : ''}`} />
+            </button>
+
+            {/* Mute Toggle */}
+            <button
+              onClick={toggleMute}
+              className="group relative flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-200 hover:scale-110 active:scale-95"
+              style={{
+                backgroundColor: isMuted ? 'rgba(217, 119, 122, 0.15)' : 'var(--bg-light-secondary)',
+                color: isMuted ? 'var(--accent)' : 'var(--text-light)',
+                boxShadow: isMuted ? '0 4px 12px rgba(217, 119, 122, 0.1)' : 'none'
+              }}
+              aria-label={isMuted ? "Unmute audio" : "Mute audio"}
+            >
+              {isMuted ? (
+                <VolumeX className="h-6 w-6 transition-transform group-hover:scale-110" />
+              ) : (
+                <Volume2 className="h-6 w-6 transition-transform group-hover:scale-110" />
+              )}
+            </button>
+          </div>
 
           {/* Microphone Button - Center */}
           <button
@@ -466,19 +638,39 @@ export default function Home() {
             )}
           </button>
 
-          {/* Info/Safety Icon - Toggles Helpline */}
-          <button
-            onClick={() => setShowHelpline(!showHelpline)}
-            className="group relative flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-200 hover:scale-110 active:scale-95"
-            style={{
-              backgroundColor: showHelpline ? 'rgba(215, 58, 58, 0.15)' : 'var(--bg-light-secondary)',
-              color: showHelpline ? 'var(--error)' : 'var(--text-light)',
-              boxShadow: showHelpline ? '0 4px 12px rgba(215, 58, 58, 0.1)' : 'none'
-            }}
-            aria-label="Toggle emergency helpline"
-          >
-            <ShieldAlert className="h-6 w-6 transition-transform group-hover:scale-110" />
-          </button>
+          <div className="flex items-center gap-3">
+            {/* Whisper Button */}
+            <button
+              onClick={toggleWhisper}
+              className="group relative flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-200 hover:scale-110 active:scale-95"
+              style={{
+                backgroundColor: isWhispering ? 'rgba(99, 102, 241, 0.2)' : 'var(--bg-light-secondary)',
+                color: isWhispering ? '#6366f1' : 'var(--text-light)',
+                boxShadow: isWhispering ? '0 4px 12px rgba(99, 102, 241, 0.15)' : 'none'
+              }}
+              aria-label={isWhispering ? "Stop whisper" : "Start whisper mode"}
+            >
+              {isProcessingWhisper ? (
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent"></div>
+              ) : (
+                <Ear className={`h-6 w-6 transition-transform group-hover:scale-110 ${isWhispering ? 'animate-pulse' : ''}`} />
+              )}
+            </button>
+
+            {/* Info/Safety Icon - Toggles Helpline */}
+            <button
+              onClick={() => setShowHelpline(!showHelpline)}
+              className="group relative flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-200 hover:scale-110 active:scale-95"
+              style={{
+                backgroundColor: showHelpline ? 'rgba(215, 58, 58, 0.15)' : 'var(--bg-light-secondary)',
+                color: showHelpline ? 'var(--error)' : 'var(--text-light)',
+                boxShadow: showHelpline ? '0 4px 12px rgba(215, 58, 58, 0.1)' : 'none'
+              }}
+              aria-label="Toggle emergency helpline"
+            >
+              <ShieldAlert className="h-6 w-6 transition-transform group-hover:scale-110" />
+            </button>
+          </div>
         </div>
       </footer>
     </main>
