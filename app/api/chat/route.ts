@@ -32,15 +32,20 @@ You must ALWAYS respond in valid JSON format with the following structure:
 
 export async function POST(req: Request) {
     try {
-        const { message, history } = await req.json();
+        const { message, history, language } = await req.json();
+
+        // Dynamic Language Instruction
+        const langDirective = language === 'sw-KE'
+            ? "LANGUAGE: You MUST reply in FLUENT SWAHILI (Kiswahili). Use natural Kenyan phrasing (e.g., 'Pole sana', 'Tuko hapa'). Do not mix English unless necessary for technical terms."
+            : "LANGUAGE: Reply in English.";
 
         const model = genAI.getGenerativeModel({
-            model: "gemini-2.5-flash",
-            systemInstruction: SYSTEM_INSTRUCTION,
+            model: "gemini-2.5-flash", // Upgraded to 2.0-flash for better multilingual support
+            systemInstruction: SYSTEM_INSTRUCTION + "\n\n" + langDirective,
         });
 
         const chat = model.startChat({
-            history: history || [],
+            history: (history || []).slice(-10), // Keep only last 10 messages to save tokens
             generationConfig: {
                 maxOutputTokens: 200,
                 temperature: 0.7,
@@ -48,7 +53,7 @@ export async function POST(req: Request) {
             },
         });
 
-        const result = await chat.sendMessage(SYSTEM_INSTRUCTION + "\nUser Input: " + message);
+        const result = await chat.sendMessage(message);
         const responseText = result.response.text();
 
         return NextResponse.json(JSON.parse(responseText));

@@ -38,7 +38,7 @@ export interface UseSpeechRecognitionReturn {
     error: string | null;
 }
 
-export default function useSpeechRecognition(): UseSpeechRecognitionReturn {
+export default function useSpeechRecognition(lang: string = "en-US"): UseSpeechRecognitionReturn {
     const [isListening, setIsListening] = useState(false);
     const [transcript, setTranscript] = useState("");
     const [hasRecognitionSupport, setHasRecognitionSupport] = useState(false);
@@ -62,7 +62,7 @@ export default function useSpeechRecognition(): UseSpeechRecognitionReturn {
             const recognition = new SpeechRecognitionConstructor();
             recognition.continuous = true; // Keep listening even after user pauses
             recognition.interimResults = true; // Show results while speaking
-            recognition.lang = "en-US"; // Default to English, can be parameterized later
+            recognition.lang = lang; // Use dynamic language (e.g., sw-KE)
 
             recognition.onstart = () => {
                 setIsListening(true);
@@ -109,7 +109,7 @@ export default function useSpeechRecognition(): UseSpeechRecognitionReturn {
                 recognitionRef.current.stop();
             }
         };
-    }, []);
+    }, [lang]);
 
     const startListening = useCallback(() => {
         setError(null);

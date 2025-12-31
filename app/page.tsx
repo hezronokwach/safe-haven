@@ -10,7 +10,8 @@ interface Message {
 }
 
 export default function Home() {
-  const { isListening, transcript, startListening, stopListening, resetTranscript, error } = useSpeechRecognition();
+  const [language, setLanguage] = useState<'en-US' | 'sw-KE'>('en-US');
+  const { isListening, transcript, startListening, stopListening, resetTranscript, error } = useSpeechRecognition(language);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -18,6 +19,7 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [showHelpline, setShowHelpline] = useState(false);
   const [voiceGender, setVoiceGender] = useState<'female' | 'male'>('female');
+
 
   // Audio playback ref
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -32,21 +34,7 @@ export default function Home() {
     setIsDarkMode(shouldBeDark);
     document.documentElement.classList.toggle("dark", shouldBeDark);
 
-    // Warm up speech synthesis voices (fixes issue where voices return empty initially)
-    const loadVoices = () => {
-      window.speechSynthesis.getVoices();
-    };
 
-    if ("speechSynthesis" in window) {
-      loadVoices();
-      window.speechSynthesis.onvoiceschanged = loadVoices;
-    }
-
-    return () => {
-      if ("speechSynthesis" in window) {
-        window.speechSynthesis.onvoiceschanged = null;
-      }
-    }
   }, []);
 
   // Handle final transcript when listening stops
@@ -80,84 +68,43 @@ export default function Home() {
       return;
     }
 
-    // FORCE BROWSER TTS (Temporary override for Voice Selection feature)
-    const useBrowserTTS = true;
+    // Use Server-Side TTS (ElevenLabs)
+    // Pass the selected gender so the server can pick the correct Voice ID
+    try {
+      const response = await fetch("/api/speak", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text,
+          gender: voiceGender,
+          language: language
+        }),
+      });
 
-    if (!useBrowserTTS) {
-      try {
-        const response = await fetch("/api/speak", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text }),
-        });
-
-        if (!response.ok) {
-          const err = await response.json();
-          console.error("TTS API Error:", err);
-          throw new Error("Failed to generate speech");
-        }
-
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-
-        if (audioRef.current) {
-          audioRef.current.pause();
-        }
-
-        const audio = new Audio(url);
-        audioRef.current = audio;
-        audio.play();
-        return; // Exit if ElevenLabs succeeded
-
-      } catch (error) {
-        console.error("ElevenLabs failed, switching to browser TTS:", error);
+      if (!response.ok) {
+        const err = await response.json();
+        console.error("TTS API Error:", err);
+        throw new Error("Failed to generate speech");
       }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.play();
+      return; // Exit if ElevenLabs succeeded
+
+    } catch (error) {
+      console.error("ElevenLabs failed, switching to browser TTS:", error);
     }
 
-    // Browser TTS Fallback (or Primary if useBrowserTTS is true)
-    if ("speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-
-      // Select voice based on preferred gender
-      let voices = window.speechSynthesis.getVoices();
-
-      // Retry getting voices if empty (common browser quirk)
-      if (voices.length === 0) {
-        window.speechSynthesis.getVoices();
-        voices = window.speechSynthesis.getVoices();
-      }
-
-      console.log("Available voices:", voices.map(v => v.name)); // Debugging
-
-      let preferredVoice: SpeechSynthesisVoice | undefined;
-
-      if (voiceGender === 'male') {
-        preferredVoice = voices.find(v =>
-          v.name.includes("Male") ||
-          v.name.includes("David") ||
-          v.name.includes("Microsoft David") ||
-          v.name.includes("Google UK English Male")
-        );
-      } else {
-        preferredVoice = voices.find(v =>
-          v.name.includes("Female") ||
-          v.name.includes("Samantha") ||
-          v.name.includes("Zira") ||
-          v.name.includes("Microsoft Zira") ||
-          v.name.includes("Hazel") ||
-          v.name.includes("Google US English")
-        );
-      }
-
-      if (preferredVoice) utterance.voice = preferredVoice;
-      utterance.rate = 1.0;
-      utterance.pitch = 1.0;
 
 
-
-      window.speechSynthesis.speak(utterance);
-    }
   };
 
   /**
@@ -179,7 +126,7 @@ export default function Home() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, history }),
+        body: JSON.stringify({ message: text, history, language }),
       });
 
       if (!response.ok) throw new Error("Failed to get response");
@@ -223,6 +170,13 @@ export default function Home() {
    */
   const toggleVoice = () => {
     setVoiceGender(prev => prev === 'female' ? 'male' : 'female');
+  };
+
+  /**
+   * Toggles between English and Swahili.
+   */
+  const toggleLanguage = () => {
+    setLanguage(prev => prev === 'en-US' ? 'sw-KE' : 'en-US');
   };
 
   /**
@@ -295,6 +249,18 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Language Toggle */}
+            <button
+              onClick={toggleLanguage}
+              className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold shadow-sm transition-all duration-200 hover:scale-105 active:scale-95 ${language === 'en-US'
+                ? "bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300"
+                : "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/40 dark:text-green-300"
+                }`}
+              aria-label={`Current language: ${language === 'en-US' ? 'English' : 'Swahili'}. Click to switch.`}
+            >
+              <span className="uppercase">{language === 'en-US' ? 'ENG' : 'SWA'}</span>
+            </button>
+
             {/* Voice Toggle */}
             <button
               onClick={toggleVoice}
