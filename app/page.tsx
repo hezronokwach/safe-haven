@@ -76,7 +76,8 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           text,
-          gender: voiceGender
+          gender: voiceGender,
+          language: language
         }),
       });
 
