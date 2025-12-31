@@ -31,6 +31,10 @@ export default function Home() {
   const [isWhispering, setIsWhispering] = useState(false);
   const [isProcessingWhisper, setIsProcessingWhisper] = useState(false);
 
+  // Alignment / Caption State
+  const [captionText, setCaptionText] = useState("");
+  const [highlightIndex, setHighlightIndex] = useState(-1);
+
   // Initialize theme after mount to avoid hydration mismatch
   useEffect(() => {
     setMounted(true);
@@ -103,6 +107,28 @@ export default function Home() {
 
       const audio = new Audio(url);
       audioRef.current = audio;
+
+      // Setup Visual Alignment (Karaoke)
+      setCaptionText(text);
+      setHighlightIndex(-1);
+
+      const words = text.split(" ");
+      audio.ontimeupdate = () => {
+        if (audio.duration && audio.duration > 0) {
+          const progress = audio.currentTime / audio.duration;
+          // Simple linear mapping
+          const index = Math.min(
+            Math.floor(progress * words.length),
+            words.length - 1
+          );
+          setHighlightIndex(index);
+        }
+      };
+      audio.onended = () => {
+        setCaptionText("");
+        setHighlightIndex(-1);
+      };
+
       audio.play();
       return; // Exit if ElevenLabs succeeded
 
@@ -478,10 +504,28 @@ export default function Home() {
                     : '0 2px 8px rgba(0, 0, 0, 0.05)'
                 }}
               >
-                <p className="text-base leading-relaxed">{msg.text}</p>
+                {msg.text === captionText && msg.role === "ai" ? (
+                  <p className="text-base leading-relaxed">
+                    {msg.text.split(" ").map((word, i) => (
+                      <span
+                        key={i}
+                        className={`mx-0.5 inline-block transition-all duration-200 ${i === highlightIndex
+                          ? "font-bold text-teal-600 dark:text-teal-400 scale-105"
+                          : "opacity-100"
+                          }`}
+                      >
+                        {word}
+                      </span>
+                    ))}
+                  </p>
+                ) : (
+                  <p className="text-base leading-relaxed">{msg.text}</p>
+                )}
               </div>
             </div>
           ))}
+
+
 
           {/* Live Transcript (Ghost Message) */}
           {isListening && transcript && (
