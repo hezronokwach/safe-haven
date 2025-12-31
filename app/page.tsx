@@ -10,7 +10,8 @@ interface Message {
 }
 
 export default function Home() {
-  const { isListening, transcript, startListening, stopListening, resetTranscript, error } = useSpeechRecognition();
+  const [language, setLanguage] = useState<'en-US' | 'sw-KE'>('en-US');
+  const { isListening, transcript, startListening, stopListening, resetTranscript, error } = useSpeechRecognition(language);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -18,6 +19,7 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [showHelpline, setShowHelpline] = useState(false);
   const [voiceGender, setVoiceGender] = useState<'female' | 'male'>('female');
+
 
   // Audio playback ref
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -123,7 +125,7 @@ export default function Home() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, history }),
+        body: JSON.stringify({ message: text, history, language }),
       });
 
       if (!response.ok) throw new Error("Failed to get response");
@@ -167,6 +169,13 @@ export default function Home() {
    */
   const toggleVoice = () => {
     setVoiceGender(prev => prev === 'female' ? 'male' : 'female');
+  };
+
+  /**
+   * Toggles between English and Swahili.
+   */
+  const toggleLanguage = () => {
+    setLanguage(prev => prev === 'en-US' ? 'sw-KE' : 'en-US');
   };
 
   /**
@@ -239,6 +248,18 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Language Toggle */}
+            <button
+              onClick={toggleLanguage}
+              className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold shadow-sm transition-all duration-200 hover:scale-105 active:scale-95 ${language === 'en-US'
+                ? "bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300"
+                : "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/40 dark:text-green-300"
+                }`}
+              aria-label={`Current language: ${language === 'en-US' ? 'English' : 'Swahili'}. Click to switch.`}
+            >
+              <span className="uppercase">{language === 'en-US' ? 'ENG' : 'SWA'}</span>
+            </button>
+
             {/* Voice Toggle */}
             <button
               onClick={toggleVoice}
