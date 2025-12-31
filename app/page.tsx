@@ -609,7 +609,7 @@ export default function Home() {
               {isProcessingWhisper ? (
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent"></div>
               ) : (
-                <Lock className={`h-6 w-6 transition-transform group-hover:scale-110 ${isWhispering ? 'animate-pulse' : ''}`} />
+                <Ear className={`h-6 w-6 transition-transform group-hover:scale-110 ${isWhispering ? 'animate-pulse' : ''}`} />
               )}
             </button>
 
