@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import TelegramBot from 'node-telegram-bot-api';
-import { redis } from '@/lib/redis'; // Updated import path
+import { redis } from '@/lib/redis'; 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
         const update = await req.json();
         const message = update.message;
 
-        if (!message) return NextResponse.json({ ok: true }); // Ignore non-message updates
+        if (!message) return NextResponse.json({ ok: true }); 
 
         const chatId = message.chat.id;
         const text = message.text;
@@ -43,8 +43,7 @@ export async function POST(req: Request) {
         if (text) {
             // A. Get History from Redis
             const historyKey = `chat:${chatId}`;
-            const rawHistory = await redis.lrange(historyKey, 0, 9) || []; // Last 10 messages
-            // Redis returns strings, we can just join them or format them for context
+            const rawHistory = await redis.lrange(historyKey, 0, 9) || []; 
             const historyData = rawHistory.reverse().map((item: string) => {
                 const [role, ...content] = item.split(':');
                 return { role: role === 'User' ? 'user' : 'model', parts: [{ text: content.join(':').trim() }] };
@@ -70,7 +69,7 @@ export async function POST(req: Request) {
             // D. Update Redis History
             await redis.lpush(historyKey, `User: ${text}`);
             await redis.lpush(historyKey, `AI: ${aiReply}`);
-            await redis.expire(historyKey, 86400); // Expire after 24h
+            await redis.expire(historyKey, 86400); 
         }
 
         return NextResponse.json({ ok: true });
