@@ -12,14 +12,17 @@
     "@ducanh2912/next-pwa": "^10.2.9",
     "@elevenlabs/react": "^0.12.3",
     "@google/generative-ai": "^0.24.1",
+    "@upstash/redis": "^1.36.1",
     "lucide-react": "^0.561.0",
     "next": "16.0.10",
+    "node-telegram-bot-api": "^0.63.0",
     "react": "19.2.1",
     "react-dom": "19.2.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/node-telegram-bot-api": "^0.64.13",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
