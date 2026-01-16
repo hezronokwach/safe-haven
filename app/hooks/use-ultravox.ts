@@ -13,6 +13,7 @@ export const useUltravox = () => {
     const [status, setStatus] = useState<UltravoxStatus>('IDLE');
     const [transcripts, setTranscripts] = useState<TranscriptItem[]>([]);
     const [isMicMuted, setIsMicMuted] = useState(false);
+    const [isSpeakerMuted, setIsSpeakerMuted] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     // The session instance
@@ -101,14 +102,23 @@ export const useUltravox = () => {
         }
     }, []);
 
+    const toggleSpeaker = useCallback(() => {
+        if (sessionRef.current) {
+            sessionRef.current.toggleSpeakerMute();
+            setIsSpeakerMuted(sessionRef.current.isSpeakerMuted);
+        }
+    }, []);
+
     return {
         status,
         transcripts,
         isMicMuted,
+        isSpeakerMuted,
         error,
         startSession,
         endSession,
         toggleMic,
+        toggleSpeaker,
         // Expose raw session for advanced use (like Simli audio bridging)
         session: sessionRef.current
     };
