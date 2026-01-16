@@ -3,9 +3,15 @@ import * as UltravoxClient from 'ultravox-client';
 
 export type UltravoxStatus = 'IDLE' | 'CONNECTING' | 'ACTIVE' | 'ERROR';
 
+export interface TranscriptItem {
+    text: string;
+    speaker: 'user' | 'agent';
+    isFinal: boolean;
+}
+
 export const useUltravox = () => {
     const [status, setStatus] = useState<UltravoxStatus>('IDLE');
-    const [transcripts, setTranscripts] = useState<string[]>([]);
+    const [transcripts, setTranscripts] = useState<TranscriptItem[]>([]);
     const [isMicMuted, setIsMicMuted] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -50,16 +56,27 @@ export const useUltravox = () => {
             });
 
             session.addEventListener('transcripts', () => {
+                console.log('Transcripts event fired');
                 const updated = session.transcripts;
-                if (updated) {
-                    setTranscripts(updated.map((t: any) => t.text));
+                if (updated && updated.length > 0) {
+                    console.log('Raw transcripts:', updated);
+                    const formatted: TranscriptItem[] = updated.map((t: any) => ({
+                        text: t.text,
+                        speaker: t.speaker === 'user' ? 'user' : 'agent',
+                        isFinal: t.isFinal
+                    }));
+                    setTranscripts(formatted);
                 }
             });
 
             // 4. Join Call
             await session.joinCall(data.joinUrl);
+
+            // 5. Mute mic by default (user must click to unmute)
+            session.muteMic();
+
             setStatus('ACTIVE');
-            setIsMicMuted(session.isMicMuted);
+            setIsMicMuted(true); // Start muted
 
         } catch (err: any) {
             console.error("Ultravox Connection Error:", err);
