@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Mic, MicOff, ShieldAlert, LogOut, Sun, Moon, Phone } from "lucide-react";
+import { Mic, MicOff, Volume2, VolumeX, ShieldAlert, LogOut, Sun, Moon, Phone } from "lucide-react";
 import { useUltravox } from "../hooks/use-ultravox";
 
 interface Message {
@@ -14,11 +14,12 @@ export default function VoicePage() {
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [mounted, setMounted] = useState(false);
     const [showHelpline, setShowHelpline] = useState(false);
+    const [isSpeakerMuted, setIsSpeakerMuted] = useState(false);
 
     // Convert Ultravox transcripts to Message format
-    const messages: Message[] = transcripts.map((text, index) => ({
-        role: index % 2 === 0 ? "user" : "ai",
-        text
+    const messages: Message[] = transcripts.map((t) => ({
+        role: t.speaker === 'user' ? 'user' : 'ai',
+        text: t.text
     }));
 
     // Initialize theme
@@ -31,12 +32,17 @@ export default function VoicePage() {
         document.documentElement.classList.toggle("dark", shouldBeDark);
     }, []);
 
-    // Auto-start Ultravox session
+    // Auto-start Ultravox session (but with mic muted initially)
     useEffect(() => {
         if (status === 'IDLE') {
             startSession();
         }
     }, [status, startSession]);
+
+    const toggleSpeaker = () => {
+        setIsSpeakerMuted(!isSpeakerMuted);
+        // TODO: Implement speaker mute in Ultravox session
+    };
 
     const toggleTheme = () => {
         const newTheme = !isDarkMode;
@@ -144,8 +150,8 @@ export default function VoicePage() {
                         >
                             <div
                                 className={`max-w-[85%] rounded-2xl px-5 py-3.5 shadow-md transition-all duration-300 sm:max-w-[75%] ${msg.role === "user"
-                                        ? "rounded-br-sm bg-gradient-to-br from-teal-500 to-teal-600 text-white shadow-lg"
-                                        : "rounded-bl-sm glass-panel text-gray-800 dark:text-gray-100 shadow-sm"
+                                    ? "rounded-br-sm bg-gradient-to-br from-teal-500 to-teal-600 text-white shadow-lg"
+                                    : "rounded-bl-sm glass-panel text-gray-800 dark:text-gray-100 shadow-sm"
                                     }`}
                                 style={{
                                     background: msg.role === "user"
@@ -192,7 +198,27 @@ export default function VoicePage() {
 
             {/* Control Panel Footer */}
             <footer className="fixed bottom-0 z-50 w-full border-t border-white/20 bg-white/60 backdrop-blur-2xl transition-all duration-500 dark:border-white/10 dark:bg-gray-900/60 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.02)]">
-                <div className="mx-auto flex max-w-md items-center justify-center px-6 py-4 sm:px-8 lg:max-w-5xl">
+                <div className="mx-auto flex max-w-md items-center justify-between px-6 py-4 sm:px-8 lg:max-w-5xl">
+                    <div className="flex items-center gap-3">
+                        {/* Speaker/Mute Toggle */}
+                        <button
+                            onClick={toggleSpeaker}
+                            className="group relative flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-200 hover:scale-110 active:scale-95"
+                            style={{
+                                backgroundColor: isSpeakerMuted ? 'rgba(217, 119, 122, 0.15)' : 'var(--bg-light-secondary)',
+                                color: isSpeakerMuted ? 'var(--accent)' : 'var(--text-light)',
+                                boxShadow: isSpeakerMuted ? '0 4px 12px rgba(217, 119, 122, 0.1)' : 'none'
+                            }}
+                            aria-label={isSpeakerMuted ? "Unmute audio" : "Mute audio"}
+                        >
+                            {isSpeakerMuted ? (
+                                <VolumeX className="h-6 w-6 transition-transform group-hover:scale-110" />
+                            ) : (
+                                <Volume2 className="h-6 w-6 transition-transform group-hover:scale-110" />
+                            )}
+                        </button>
+                    </div>
+
                     {/* Microphone Button - Center */}
                     <button
                         onClick={toggleMic}
@@ -217,6 +243,22 @@ export default function VoicePage() {
                             <Mic className="relative h-9 w-9 text-white transition-transform group-hover:scale-110" />
                         )}
                     </button>
+
+                    <div className="flex items-center gap-3">
+                        {/* Emergency Helpline Toggle */}
+                        <button
+                            onClick={() => setShowHelpline(!showHelpline)}
+                            className="group relative flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-200 hover:scale-110 active:scale-95"
+                            style={{
+                                backgroundColor: showHelpline ? 'rgba(215, 58, 58, 0.15)' : 'var(--bg-light-secondary)',
+                                color: showHelpline ? 'var(--error)' : 'var(--text-light)',
+                                boxShadow: showHelpline ? '0 4px 12px rgba(215, 58, 58, 0.1)' : 'none'
+                            }}
+                            aria-label="Toggle emergency helpline"
+                        >
+                            <ShieldAlert className="h-6 w-6 transition-transform group-hover:scale-110" />
+                        </button>
+                    </div>
                 </div>
             </footer>
         </main>
