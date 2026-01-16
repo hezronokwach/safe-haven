@@ -38,7 +38,7 @@ export interface UseSpeechRecognitionReturn {
     error: string | null;
 }
 
-export default function useSpeechRecognition(lang: string = "en-US"): UseSpeechRecognitionReturn {
+export default function useSpeechRecognition(lang: string = "en-US", isDisabled: boolean = false): UseSpeechRecognitionReturn {
     const [isListening, setIsListening] = useState(false);
     const [transcript, setTranscript] = useState("");
     const [hasRecognitionSupport, setHasRecognitionSupport] = useState(false);
@@ -48,6 +48,14 @@ export default function useSpeechRecognition(lang: string = "en-US"): UseSpeechR
     const recognitionRef = useRef<SpeechRecognition | null>(null);
 
     useEffect(() => {
+        if (isDisabled) {
+            if (recognitionRef.current && isListening) {
+                recognitionRef.current.stop();
+                setIsListening(false);
+            }
+            return;
+        }
+
         const windowWithSpeech = window as unknown as WindowWithSpeech;
         // Check for browser support
         if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
@@ -109,7 +117,7 @@ export default function useSpeechRecognition(lang: string = "en-US"): UseSpeechR
                 recognitionRef.current.stop();
             }
         };
-    }, [lang]);
+    }, [lang, isDisabled]);
 
     const startListening = useCallback(() => {
         setError(null);
