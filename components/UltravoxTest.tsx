@@ -22,7 +22,10 @@ const UltravoxTest: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     <p className="text-gray-500 italic text-center mt-10">Transcripts will appear here...</p>
                 ) : (
                     transcripts.map((t, i) => (
-                        <div key={i} className="mb-2 p-2 bg-gray-700 rounded">{t}</div>
+                        <div key={i} className="mb-2 p-2 bg-gray-700 rounded">
+                            <span className="text-xs text-gray-400">{t.speaker}: </span>
+                            {t.text}
+                        </div>
                     ))
                 )}
             </div>
