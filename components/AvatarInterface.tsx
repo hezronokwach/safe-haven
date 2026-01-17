@@ -132,7 +132,7 @@ const AvatarInterface: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                             int16Data[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
                         }
                         if (simliClient) {
-                            simliClient.sendAudioData(int16Data);
+                            simliClient.sendAudioData(new Uint8Array(int16Data.buffer));
                         }
                     };
 
