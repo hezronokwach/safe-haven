@@ -168,7 +168,7 @@ export const useHume = () => {
         }
     }, []);
 
-    const startSession = useCallback(async () => {
+    const startSession = useCallback(async (options?: { configId?: string; voiceId?: string; language?: string }) => {
         try {
             if (socketRef.current) {
                 console.log('Session already active');
@@ -185,10 +185,23 @@ export const useHume = () => {
 
             const client = new HumeClient({ apiKey });
 
-            const configId = process.env.NEXT_PUBLIC_HUME_CONFIG_ID;
-            const socket = await client.empathicVoice.chat.connect(
-                configId ? { configId } : {}
-            );
+            const configId = options?.configId || process.env.NEXT_PUBLIC_HUME_CONFIG_ID;
+
+            // Prepare connect options
+            const connectOptions: any = {};
+            if (configId) connectOptions.configId = configId;
+
+            // Hume EVI supports overriding settings at connect time
+            const sessionSettings: any = {};
+            if (options?.voiceId) sessionSettings.voiceId = options.voiceId;
+            // Note: Language override might need the language model settings, 
+            // but we can pass it as part of session settings if Hume supports it as a top-level override.
+
+            if (Object.keys(sessionSettings).length > 0) {
+                connectOptions.sessionSettings = sessionSettings;
+            }
+
+            const socket = await client.empathicVoice.chat.connect(connectOptions);
 
             socketRef.current = socket;
 
@@ -215,6 +228,17 @@ export const useHume = () => {
         setStatus('IDLE');
         setMessages([]);
     }, [stopAudioCapture]);
+
+    const updateSessionSettings = useCallback((settings: { voiceId?: string; systemPrompt?: string; context?: string }) => {
+        if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+            const sessionSettings: any = {
+                type: 'session_settings',
+                ...settings
+            };
+            socketRef.current.sendSessionSettings(sessionSettings);
+            console.log('Session settings updated:', settings);
+        }
+    }, []);
 
     const toggleMic = useCallback(async () => {
         if (!socketRef.current) {
@@ -248,6 +272,7 @@ export const useHume = () => {
         startSession,
         endSession,
         toggleMic,
-        toggleSpeaker
+        toggleSpeaker,
+        updateSessionSettings
     };
 };
