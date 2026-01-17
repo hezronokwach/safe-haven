@@ -21,6 +21,7 @@ export interface HumeMessage {
 export const useHume = () => {
     const [status, setStatus] = useState<HumeStatus>('IDLE');
     const [messages, setMessages] = useState<HumeMessage[]>([]);
+    const [liveTranscript, setLiveTranscript] = useState<string>('');
     const [isMicMuted, setIsMicMuted] = useState(true);
     const [isSpeakerMuted, setIsSpeakerMuted] = useState(false);
     const isSpeakerMutedRef = useRef(false);
@@ -111,11 +112,16 @@ export const useHume = () => {
 
             case 'user_message':
                 if (msg.message?.content) {
-                    setMessages(prev => [...prev, {
-                        role: 'user',
-                        text: msg.message.content,
-                        timestamp: Date.now()
-                    }]);
+                    if (msg.interim) {
+                        setLiveTranscript(msg.message.content);
+                    } else {
+                        setLiveTranscript('');
+                        setMessages(prev => [...prev, {
+                            role: 'user',
+                            text: msg.message.content,
+                            timestamp: Date.now()
+                        }]);
+                    }
                 }
                 break;
 
@@ -235,6 +241,7 @@ export const useHume = () => {
     return {
         status,
         messages,
+        liveTranscript,
         isMicMuted,
         isSpeakerMuted,
         error,
