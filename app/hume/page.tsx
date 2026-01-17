@@ -5,10 +5,11 @@ import { Mic, MicOff, Volume2, VolumeX, ShieldAlert, LogOut, Sun, Moon, Phone } 
 import { useHume } from "../hooks/use-hume";
 
 export default function HumePage() {
-    const { status, messages, liveTranscript, error, startSession, endSession, toggleMic, toggleSpeaker, isMicMuted, isSpeakerMuted } = useHume();
+    const { status, messages, liveTranscript, error, startSession, endSession, toggleMic, toggleSpeaker, isMicMuted, isSpeakerMuted, updateSessionSettings } = useHume();
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [mounted, setMounted] = useState(false);
     const [showHelpline, setShowHelpline] = useState(false);
+    const [voiceGender, setVoiceGender] = useState<'female' | 'male'>('female');
 
     // Initialize theme
     useEffect(() => {
@@ -23,9 +24,28 @@ export default function HumePage() {
     // Auto-start Hume session
     useEffect(() => {
         if (status === 'IDLE') {
-            startSession();
+            const femaleVoice = process.env.NEXT_PUBLIC_HUME_VOICE_ID_FEMALE || 'KORA';
+            const maleVoice = process.env.NEXT_PUBLIC_HUME_VOICE_ID_MALE || 'DAWSON';
+            startSession({
+                voiceId: voiceGender === 'female' ? femaleVoice : maleVoice
+            });
         }
-    }, [status, startSession]);
+    }, [status, startSession, voiceGender]);
+
+    const toggleVoice = () => {
+        const newGender = voiceGender === 'female' ? 'male' : 'female';
+        setVoiceGender(newGender);
+
+        const femaleVoice = process.env.NEXT_PUBLIC_HUME_VOICE_ID_FEMALE || 'KORA';
+        const maleVoice = process.env.NEXT_PUBLIC_HUME_VOICE_ID_MALE || 'DAWSON';
+
+        // If session is active, update settings dynamically
+        if (status === 'ACTIVE') {
+            updateSessionSettings({
+                voiceId: newGender === 'female' ? femaleVoice : maleVoice
+            });
+        }
+    };
 
     const toggleTheme = () => {
         const newTheme = !isDarkMode;
@@ -63,6 +83,14 @@ export default function HumePage() {
                     </div>
 
                     <div className="flex items-center gap-2">
+                        <button
+                            onClick={toggleVoice}
+                            className="relative flex h-10 px-3 items-center justify-center rounded-lg bg-gray-100 text-gray-600 transition-all duration-200 hover:scale-105 active:scale-95 dark:bg-gray-800 dark:text-gray-300 gap-2"
+                            aria-label="Toggle voice"
+                        >
+                            <span className="text-xs font-bold uppercase tracking-wider">{voiceGender}</span>
+                        </button>
+
                         <button
                             onClick={toggleTheme}
                             className="relative flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 text-gray-600 transition-all duration-200 hover:scale-110 active:scale-95 dark:bg-gray-800 dark:text-gray-300"
