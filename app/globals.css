@@ -121,15 +121,12 @@ html {
 }
 
 @keyframes typing {
-  0% {
-    opacity: 0;
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+
+.animate-typing {
+  animation: typing 1s infinite;
 }
 
 @keyframes shimmer {
