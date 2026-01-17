@@ -5,7 +5,7 @@ import { Mic, MicOff, Volume2, VolumeX, ShieldAlert, LogOut, Sun, Moon, Phone } 
 import { useHume } from "../hooks/use-hume";
 
 export default function HumePage() {
-    const { status, messages, error, startSession, endSession, toggleMic, toggleSpeaker, isMicMuted, isSpeakerMuted } = useHume();
+    const { status, messages, liveTranscript, error, startSession, endSession, toggleMic, toggleSpeaker, isMicMuted, isSpeakerMuted } = useHume();
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [mounted, setMounted] = useState(false);
     const [showHelpline, setShowHelpline] = useState(false);
@@ -133,8 +133,8 @@ export default function HumePage() {
                         >
                             <div
                                 className={`max-w-[85%] rounded-2xl px-5 py-3.5 shadow-md transition-all duration-300 sm:max-w-[75%] ${msg.role === "user"
-                                        ? "rounded-br-sm bg-gradient-to-br from-teal-500 to-teal-600 text-white shadow-lg"
-                                        : "rounded-bl-sm glass-panel text-gray-800 dark:text-gray-100 shadow-sm"
+                                    ? "rounded-br-sm bg-gradient-to-br from-teal-500 to-teal-600 text-white shadow-lg"
+                                    : "rounded-bl-sm glass-panel text-gray-800 dark:text-gray-100 shadow-sm"
                                     }`}
                                 style={{
                                     background: msg.role === "user"
@@ -147,6 +147,18 @@ export default function HumePage() {
                             </div>
                         </div>
                     ))}
+
+                    {/* Live Transcript (Ghost Message) */}
+                    {liveTranscript && (
+                        <div className="flex animate-fade-in justify-end">
+                            <div className="max-w-[80%] rounded-2xl rounded-tr-none px-5 py-4 text-white sm:max-w-[70%]" style={{ background: 'linear-gradient(135deg, rgba(79, 158, 143, 0.9) 0%, rgba(109, 184, 165, 0.9) 100%)', backdropFilter: 'blur(8px)' }}>
+                                <p className="text-base leading-relaxed opacity-95">
+                                    {liveTranscript}
+                                    <span className="animate-typing ml-1 inline-block">●</span>
+                                </p>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Thinking State */}
                     {status === 'CONNECTING' && (
