@@ -10,11 +10,10 @@ interface Message {
 }
 
 export default function VoicePage() {
-    const { status, transcripts, error, startSession, endSession, toggleMic, isMicMuted } = useUltravox();
+    const { status, transcripts, error, startSession, endSession, toggleMic, toggleSpeaker, isMicMuted, isSpeakerMuted } = useUltravox();
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [mounted, setMounted] = useState(false);
     const [showHelpline, setShowHelpline] = useState(false);
-    const [isSpeakerMuted, setIsSpeakerMuted] = useState(false);
 
     // Convert Ultravox transcripts to Message format
     const messages: Message[] = transcripts.map((t) => ({
@@ -39,10 +38,7 @@ export default function VoicePage() {
         }
     }, [status, startSession]);
 
-    const toggleSpeaker = () => {
-        setIsSpeakerMuted(!isSpeakerMuted);
-        // TODO: Implement speaker mute in Ultravox session
-    };
+
 
     const toggleTheme = () => {
         const newTheme = !isDarkMode;
