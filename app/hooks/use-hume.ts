@@ -23,6 +23,7 @@ export const useHume = () => {
     const [messages, setMessages] = useState<HumeMessage[]>([]);
     const [isMicMuted, setIsMicMuted] = useState(true);
     const [isSpeakerMuted, setIsSpeakerMuted] = useState(false);
+    const isSpeakerMutedRef = useRef(false);
     const [error, setError] = useState<string | null>(null);
 
     const socketRef = useRef<any>(null);
@@ -65,7 +66,7 @@ export const useHume = () => {
                 setError('Microphone error');
             };
 
-            recorder.start(80); 
+            recorder.start(80);
             recorderRef.current = recorder;
             setIsMicMuted(false);
 
@@ -103,7 +104,7 @@ export const useHume = () => {
 
         switch (msg.type) {
             case 'audio_output':
-                if (playerRef.current && !isSpeakerMuted) {
+                if (playerRef.current && !isSpeakerMutedRef.current) {
                     await playerRef.current.enqueue(msg);
                 }
                 break;
@@ -138,7 +139,7 @@ export const useHume = () => {
             default:
                 console.log('Unhandled message type:', msg.type);
         }
-    }, [isSpeakerMuted]);
+    }, []);
 
     const handleError = useCallback((err: Event | Error) => {
         console.error('Hume socket error:', err);
@@ -223,11 +224,13 @@ export const useHume = () => {
     }, [isMicMuted, startAudioCapture, stopAudioCapture]);
 
     const toggleSpeaker = useCallback(() => {
-        setIsSpeakerMuted(prev => !prev);
-        if (playerRef.current && !isSpeakerMuted) {
+        const newValue = !isSpeakerMutedRef.current;
+        isSpeakerMutedRef.current = newValue;
+        setIsSpeakerMuted(newValue);
+        if (playerRef.current && newValue) {
             playerRef.current.stop();
         }
-    }, [isSpeakerMuted]);
+    }, []);
 
     return {
         status,
