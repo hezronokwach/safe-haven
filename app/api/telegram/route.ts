@@ -19,7 +19,7 @@ Do NOT output JSON. Output natural conversational text.
 If the user indicates IMMEDIATE danger (e.g., "he is here", "I am bleeding"), your reply MUST be:
 "Use the Safety Plan: 
 1. Leave immediately if possible.
-2. Call 1195 (GBV Helpline).
+2. Call 1195 (GBV Kenya Helpline).
 3. Visit the nearest hospital."
 `;
 
